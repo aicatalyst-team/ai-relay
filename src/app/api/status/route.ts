@@ -3,7 +3,7 @@
 // ============================================================
 
 import { NextRequest } from 'next/server';
-import { getKeyPoolStats } from '@/lib/relay';
+import { getKeyPoolStats, initAllKeyPools } from '@/lib/relay';
 import { getRateLimiterStats } from '@/lib/relay/rate-limiter';
 import { KVUsageStorage } from '@/lib/usage';
 import { PROVIDERS } from '@/lib/providers';
@@ -16,6 +16,7 @@ export async function GET(request: NextRequest) {
   const url = new URL(request.url);
   const showDetails = url.searchParams.get('detail') === '1';
 
+  initAllKeyPools(PROVIDERS);
   const providerStats = getKeyPoolStats();
   const rateLimiterStats = getRateLimiterStats();
   const globalUsage = await usageStorage.getGlobalUsage();

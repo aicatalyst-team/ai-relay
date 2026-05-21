@@ -3,7 +3,7 @@
 // ============================================================
 
 import { NextRequest } from 'next/server';
-import { getKeyPoolStats, getRelayApiKeys } from '@/lib/relay';
+import { getKeyPoolStats, getRelayApiKeys, initAllKeyPools } from '@/lib/relay';
 import { KVUsageStorage } from '@/lib/usage';
 import { PROVIDERS } from '@/lib/providers';
 
@@ -33,6 +33,8 @@ export async function GET(request: NextRequest) {
     );
   }
 
+  // Eagerly init all provider pools so stats reflect all configured providers
+  initAllKeyPools(PROVIDERS);
   const providerStats = getKeyPoolStats();
   const globalUsage = await usageStorage.getGlobalUsage();
   const quota = await usageStorage.checkQuota();

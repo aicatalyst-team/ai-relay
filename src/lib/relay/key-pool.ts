@@ -105,6 +105,19 @@ export function markCooldown(key: ApiKey): void {
 }
 
 /**
+ * Eagerly initialize all provider key pools from environment variables.
+ * Call this in admin/status endpoints so stats reflect all configured providers,
+ * not just ones that have handled a request in this invocation.
+ */
+export function initAllKeyPools(configs: Record<string, { envKeyField: string; name: string }>): void {
+  for (const config of Object.values(configs)) {
+    if (!keyPools.has(config.name)) {
+      initKeyPool(config as ProviderConfig);
+    }
+  }
+}
+
+/**
  * Get key pool stats for admin/status page.
  */
 export function getKeyPoolStats(): Record<string, { total: number; available: number }> {
