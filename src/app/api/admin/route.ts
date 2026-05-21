@@ -83,7 +83,7 @@ export async function GET(request: NextRequest) {
     status: 'ok',
     timestamp: new Date().toISOString(),
     providers: providersWithErrors,
-    usage: globalUsage || { requests: 0, tokens: 0 },
+    usage: globalUsage || { requests: 0, tokens: 0, promptTokens: 0, completionTokens: 0, providers: {} },
     quota: {
       daily: { used: quota.dailyUsed, limit: quota.dailyLimit || 'unlimited' },
       monthly: { used: quota.monthlyUsed, limit: quota.monthlyLimit || 'unlimited' },

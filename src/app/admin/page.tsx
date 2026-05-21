@@ -21,7 +21,13 @@ interface AdminData {
   status: string;
   timestamp: string;
   providers: ProviderInfo[];
-  usage: { requests: number; tokens: number };
+  usage: {
+    requests: number;
+    tokens: number;
+    promptTokens: number;
+    completionTokens: number;
+    providers: Record<string, { requests: number; tokens: number; promptTokens: number; completionTokens: number }>;
+  };
   quota: {
     daily: { used: number; limit: number | string };
     monthly: { used: number; limit: number | string };
@@ -207,7 +213,7 @@ export default function AdminPage() {
         backgroundColor: '#111', marginBottom: '1.5rem',
       }}>
         <h2 style={{ fontSize: '1.2rem', marginTop: 0 }}>📈 Today&apos;s Usage</h2>
-        <div style={{ display: 'flex', gap: '3rem' }}>
+        <div style={{ display: 'flex', gap: '3rem', flexWrap: 'wrap' }}>
           <div>
             <span style={{ color: '#888', fontSize: '0.85rem' }}>Requests</span>
             <div style={{ fontSize: '1.8rem', fontWeight: 'bold' }}>
@@ -215,12 +221,53 @@ export default function AdminPage() {
             </div>
           </div>
           <div>
-            <span style={{ color: '#888', fontSize: '0.85rem' }}>Tokens</span>
+            <span style={{ color: '#888', fontSize: '0.85rem' }}>Total Tokens</span>
             <div style={{ fontSize: '1.8rem', fontWeight: 'bold' }}>
               {fmtTokens(data!.usage.tokens)}
             </div>
           </div>
+          <div>
+            <span style={{ color: '#888', fontSize: '0.85rem' }}>Prompt Tokens</span>
+            <div style={{ fontSize: '1.8rem', fontWeight: 'bold', color: '#60a5fa' }}>
+              {fmtTokens(data!.usage.promptTokens || 0)}
+            </div>
+          </div>
+          <div>
+            <span style={{ color: '#888', fontSize: '0.85rem' }}>Completion Tokens</span>
+            <div style={{ fontSize: '1.8rem', fontWeight: 'bold', color: '#34d399' }}>
+              {fmtTokens(data!.usage.completionTokens || 0)}
+            </div>
+          </div>
         </div>
+
+        {/* Per-provider usage breakdown */}
+        {data!.usage.providers && Object.keys(data!.usage.providers).length > 0 && (
+          <div style={{ marginTop: '1.5rem' }}>
+            <h3 style={{ fontSize: '1rem', color: '#888', marginBottom: '0.75rem' }}>By Provider</h3>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr style={{ borderBottom: '1px solid #333' }}>
+                  <th style={{ textAlign: 'left', padding: '0.5rem', color: '#888' }}>Provider</th>
+                  <th style={{ textAlign: 'right', padding: '0.5rem', color: '#888' }}>Requests</th>
+                  <th style={{ textAlign: 'right', padding: '0.5rem', color: '#888' }}>Prompt</th>
+                  <th style={{ textAlign: 'right', padding: '0.5rem', color: '#888' }}>Completion</th>
+                  <th style={{ textAlign: 'right', padding: '0.5rem', color: '#888' }}>Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {Object.entries(data!.usage.providers).map(([name, stats]) => (
+                  <tr key={name} style={{ borderBottom: '1px solid #222' }}>
+                    <td style={{ padding: '0.5rem' }}>{name}</td>
+                    <td style={{ padding: '0.5rem', textAlign: 'right' }}>{fmtNum(stats.requests)}</td>
+                    <td style={{ padding: '0.5rem', textAlign: 'right', color: '#60a5fa' }}>{fmtTokens(stats.promptTokens)}</td>
+                    <td style={{ padding: '0.5rem', textAlign: 'right', color: '#34d399' }}>{fmtTokens(stats.completionTokens)}</td>
+                    <td style={{ padding: '0.5rem', textAlign: 'right' }}>{fmtTokens(stats.tokens)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </section>
 
       {/* Token Consumption Trend */}

@@ -293,16 +293,41 @@ export class KVUsageStorage implements UsageStorage {
     }
   }
 
-  async getGlobalUsage(): Promise<{ requests: number; tokens: number } | null> {
+  async getGlobalUsage(): Promise<{
+    requests: number;
+    tokens: number;
+    promptTokens: number;
+    completionTokens: number;
+    providers: Record<string, { requests: number; tokens: number; promptTokens: number; completionTokens: number }>;
+  } | null> {
     try {
       const kv = await getKV();
       if (!kv) return null;
 
       const date = today();
       const raw = await kv.hgetall(`usage:daily:${date}`);
+
+      // Fetch per-provider usage
+      const providers: Record<string, { requests: number; tokens: number; promptTokens: number; completionTokens: number }> = {};
+      for (const provider of PROVIDER_NAMES) {
+        const pRaw = await kv.hgetall(`usage:provider:${provider}:daily:${date}`);
+        const req = Number(pRaw?.requests || 0);
+        if (req > 0) {
+          providers[provider] = {
+            requests: req,
+            tokens: Number(pRaw?.tokens || 0),
+            promptTokens: Number(pRaw?.promptTokens || 0),
+            completionTokens: Number(pRaw?.completionTokens || 0),
+          };
+        }
+      }
+
       return {
         requests: Number(raw?.requests || 0),
         tokens: Number(raw?.tokens || 0),
+        promptTokens: Number(raw?.promptTokens || 0),
+        completionTokens: Number(raw?.completionTokens || 0),
+        providers,
       };
     } catch {
       return null;
