@@ -1,0 +1,85 @@
+// ============================================================
+// AI API Relay — GET /health
+// Health check endpoint for monitoring and load balancers
+// ============================================================
+
+import { PROVIDERS } from '@/lib/providers';
+import { getKeyPoolStats, initAllKeyPools } from '@/lib/relay';
+
+export const runtime = 'edge';
+
+const startTime = Date.now();
+
+export async function GET() {
+  initAllKeyPools(PROVIDERS);
+  const poolStats = getKeyPoolStats();
+
+  // Count configured and healthy providers
+  let configuredProviders = 0;
+  let totalKeys = 0;
+  let availableKeys = 0;
+
+  for (const [name, config] of Object.entries(PROVIDERS)) {
+    const hasKeys = !!process.env[config.envKeyField];
+    if (hasKeys) {
+      configuredProviders++;
+      const stats = poolStats[name];
+      if (stats) {
+        totalKeys += stats.total;
+        availableKeys += stats.available;
+      }
+    }
+  }
+
+  // Healthy if at least one provider has available keys
+  const isHealthy = availableKeys > 0;
+  const uptimeMs = Date.now() - startTime;
+
+  return Response.json(
+    {
+      status: isHealthy ? 'healthy' : 'degraded',
+      timestamp: new Date().toISOString(),
+      uptime: {
+        ms: uptimeMs,
+        human: formatUptime(uptimeMs),
+      },
+      version: '1.1.0',
+      providers: {
+        configured: configuredProviders,
+        total: Object.keys(PROVIDERS).length,
+      },
+      keys: {
+        total: totalKeys,
+        available: availableKeys,
+      },
+      features: [
+        'chat/completions',
+        'models',
+        'streaming',
+        'multi-key-rotation',
+        'auto-retry',
+        'usage-tracking',
+        'error-tracking',
+      ],
+    },
+    {
+      status: isHealthy ? 200 : 503,
+      headers: {
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'X-Relay-Version': '1.1.0',
+      },
+    }
+  );
+}
+
+function formatUptime(ms: number): string {
+  const seconds = Math.floor(ms / 1000);
+  const minutes = Math.floor(seconds / 60);
+  const hours = Math.floor(minutes / 60);
+  const days = Math.floor(hours / 24);
+
+  if (days > 0) return `${days}d ${hours % 24}h ${minutes % 60}m`;
+  if (hours > 0) return `${hours}h ${minutes % 60}m`;
+  if (minutes > 0) return `${minutes}m ${seconds % 60}s`;
+  return `${seconds}s`;
+}
