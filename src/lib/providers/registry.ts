@@ -9,6 +9,16 @@ import type { ProviderConfig } from './types';
  * To add a new provider, just add an entry here.
  */
 export const PROVIDERS: Record<string, ProviderConfig> = {
+  // ⚠️ lpgpt 排在 openai 前面，gpt-5.x 走 lpgpt，gpt-4o 等走 OpenAI
+  lpgpt: {
+    name: 'lpgpt',
+    displayName: 'LPGPT (GPT-5)',
+    baseUrl: 'https://lpgpt.us/v1',
+    modelPrefixes: ['gpt-5.'],
+    headerFormat: 'openai',
+    envKeyField: 'LPGPT_KEYS',
+    envBaseUrlField: 'LPGPT_BASE_URL',
+  },
   openai: {
     name: 'openai',
     displayName: 'OpenAI',
