@@ -8,7 +8,6 @@ import { resolveProvider, getUpstreamUrl, resolveModelAlias } from '../providers
 import { selectKey, markCooldown, getKeyPool } from './key-pool';
 import { buildHeaders, transformToAnthropic } from './transform';
 import { RelayError } from '../errors';
-import { createUsageEvent } from '../usage/sdk';
 import { KVUsageStorage } from '../usage/storage/kv-storage';
 import {
   checkRateLimit,
@@ -161,11 +160,8 @@ export async function relayRequest(
       // Success → record in rate limiter
       recordSuccess(provider.name);
 
-      // Track usage asynchronously
-      if (!body.stream && upstreamResponse.ok) {
-        // Non-streaming: parse JSON response directly
-        trackUsageAsync(currentKey, upstreamResponse.clone(), provider.name, body.model, latencyMs);
-      }
+      // NOTE: Usage tracking is done in the route handler, not here.
+      // This avoids double-counting for non-streaming responses.
 
       return { response: upstreamResponse, provider, apiKey: currentKey };
     } catch (error) {
@@ -184,37 +180,4 @@ export async function relayRequest(
     'server_error',
     502
   );
-}
-
-/**
- * Track usage from a non-streaming response (async, fire-and-forget).
- * Uses the 10-field UsageEvent schema.
- */
-function trackUsageAsync(
-  apiKey: { hash: string },
-  response: Response,
-  providerName: string,
-  model: string,
-  latencyMs: number
-): void {
-  response
-    .clone()
-    .json()
-    .then((data) => {
-      const usage = data?.usage;
-      if (usage) {
-        const event = createUsageEvent({
-          provider: providerName,
-          model,
-          apiKeyHash: apiKey.hash,
-          statusCode: 200,
-          promptTokens: usage.prompt_tokens || 0,
-          completionTokens: usage.completion_tokens || 0,
-          latencyMs,
-          isStream: false,
-        });
-        usageStorage.record(event).catch(() => {});
-      }
-    })
-    .catch(() => {});
 }
