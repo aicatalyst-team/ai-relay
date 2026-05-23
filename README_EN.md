@@ -312,6 +312,13 @@ Notes:
 - **Contribution**: Full-stack architecture development, CI/CD pipeline engineering, system performance optimization, and technology evaluation
 - **Contact**: mafei@izmw.me
 
+<img src="https://avatars.githubusercontent.com/u/286716759?v=4" width="100" height="100" alt="饼哥">
+
+### 饼哥 (Bingge)
+- **Role**: Product Director
+- **Contribution**: Product planning, requirements analysis, UX design, and iteration strategy
+- **Contact**: bingge@izmw.me
+
 <!-- Team members end -->
 
 ## 🤝 Contributing

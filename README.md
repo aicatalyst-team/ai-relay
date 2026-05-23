@@ -312,6 +312,13 @@ Client → Edge Runtime (全球分发, <50ms 延迟)
 - **贡献**：负责全栈架构开发、CI/CD 流水线建设、系统性能优化和技术选型评估
 - **联系**：mafei@izmw.me
 
+<img src="https://avatars.githubusercontent.com/u/286716759?v=4" width="100" height="100" alt="饼哥">
+
+### 饼哥
+- **角色**：产品总监
+- **贡献**：负责产品规划、需求分析、用户体验设计和迭代策略
+- **联系**：bingge@izmw.me
+
 <!-- 团队成员信息结束 -->
 
 ## 🤝 贡献指南
