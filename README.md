@@ -264,62 +264,13 @@ Client → Edge Runtime (全球分发, <50ms 延迟)
 
 ## 👥 团队
 
-<!-- 格式规则（提交后删除此注释）：
-每位成员格式：
-<img src="docs/assets/avatars/你的头像文件.png" width="100" height="100" alt="姓名">
-
-### 姓名
-- **角色**：你的角色
-- **贡献**：你负责的核心工作（1-2句话）
-- **联系**：邮箱
-
-注意：
-1. 头像图片放在 docs/assets/avatars/ 目录下
-2. 使用你的真实姓名或常用名
-3. 邮箱用 izmw.me 企业邮箱
-4. 贡献内容要具体，不要泛泛而谈
-5. 提交时用你自己的 git 身份（名字+邮箱）
--->
-
-<!-- 团队成员信息开始 -->
-
-<img src="https://avatars.githubusercontent.com/u/35733668?v=4" width="100" height="100" alt="Parsifal">
-
-### Parsifal
-- **角色**：创始人 & 项目负责人
-- **贡献**：项目发起人，负责整体架构设计、技术选型和团队管理
-- **联系**：zmw@izmw.me
-
-<img src="https://avatars.githubusercontent.com/u/286714101?v=4" width="100" height="100" alt="小赫">
-
-### 小赫
-- **角色**：协调者
-- **贡献**：团队任务协调、需求分析、进度跟踪和质量把控
-- **联系**：xiaohe@izmw.me
-
-
-<img src="https://avatars.githubusercontent.com/u/286719582?v=4" width="100" height="100" alt="像素姐">
-
-### 像素姐
-- **角色**：设计总监
-- **贡献**：负责品牌视觉体系设计、Logo 设计、UI/UX 设计和 README 视觉收尾
-- **联系**：pixiel@izmw.me
-
-<img src="https://avatars.githubusercontent.com/u/286715358?v=4" width="100" height="100" alt="码飞">
-
-### 码飞
-- **角色**：技术总监
-- **贡献**：负责全栈架构开发、CI/CD 流水线建设、系统性能优化和技术选型评估
-- **联系**：mafei@izmw.me
-
-<img src="https://avatars.githubusercontent.com/u/286716759?v=4" width="100" height="100" alt="饼哥">
-
-### 饼哥
-- **角色**：产品总监
-- **贡献**：负责产品规划、需求分析、用户体验设计和迭代策略
-- **联系**：bingge@izmw.me
-
-<!-- 团队成员信息结束 -->
+| | 姓名 | 角色 | 贡献 | 联系 |
+|---|---|---|---|---|
+| <img src="https://avatars.githubusercontent.com/u/35733668?v=4" width="32" height="32" style="border-radius:50%"> | Parsifal | 创始人 & 项目负责人 | 项目发起人，负责整体架构设计、技术选型和团队管理 | zmw@izmw.me |
+| <img src="https://avatars.githubusercontent.com/u/286714101?v=4" width="32" height="32" style="border-radius:50%"> | 小赫 | 协调者 | 团队任务协调、需求分析、进度跟踪和质量把控 | xiaohe@izmw.me |
+| <img src="https://avatars.githubusercontent.com/u/286719582?v=4" width="32" height="32" style="border-radius:50%"> | 像素姐 | 设计总监 | 品牌视觉体系设计、Logo 设计、UI/UX 设计和 README 视觉收尾 | pixiel@izmw.me |
+| <img src="https://avatars.githubusercontent.com/u/286715358?v=4" width="32" height="32" style="border-radius:50%"> | 码飞 | 技术总监 | 全栈架构开发、CI/CD 流水线建设、系统性能优化和技术选型评估 | mafei@izmw.me |
+| <img src="https://avatars.githubusercontent.com/u/286716759?v=4" width="32" height="32" style="border-radius:50%"> | 饼哥 | 产品总监 | 产品规划、需求分析、用户体验设计和迭代策略 | bingge@izmw.me |
 
 ## 🤝 贡献指南
 
