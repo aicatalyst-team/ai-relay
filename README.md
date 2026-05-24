@@ -2,7 +2,7 @@
 
 <img src="docs/assets/logo-banner.svg" alt="AI Relay" width="400">
 
-**基于 Vercel Edge Runtime 的轻量级开源 AI API 中转服务**
+**无服务器 AI API 中转网关：一键部署到 Vercel，2 分钟拥有自己的多 Provider AI Relay**
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/MoyuFamily/ai-relay&env=RELAY_API_KEY,RELAY_ADMIN_KEY,RELAY_SIGNING_SECRET&envDescription=API%20authentication%20keys%20(required%20for%20security)&envLink=https://github.com/MoyuFamily/ai-relay#environment-variables)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
@@ -16,10 +16,15 @@
 
 ---
 
+> 🚀 **不用买服务器，不用写后端，不用维护 Docker。**
+>
+> AI Relay 基于 Vercel Edge Runtime 构建，点击 **Deploy with Vercel**，配置 3 个环境变量，即可获得一个支持 OpenAI / Claude / DeepSeek / 自定义 Provider 的无服务器 AI API 中转网关。
+
 ## 目录
 
 - [特性](#-特性)
-- [5 分钟快速上手](#-5-分钟快速上手)
+- [一键部署：2 分钟上线你的 AI API 网关](#-一键部署2-分钟上线你的-ai-api-网关)
+- [为什么选择 AI Relay](#为什么选择-ai-relay)
 - [使用方法](#-使用方法)
 - [配置参考](#-配置参考)
 - [架构概览](#-架构概览)
@@ -34,8 +39,12 @@
 
 | 特性 | 说明 |
 |------|------|
-| **多 Key 轮换** | Round-Robin + 429 自动退避 |
+| **无服务器架构** | 基于 Vercel Edge Runtime，无需购买 VPS / 维护 Docker / 管理后端服务 |
+| **一键部署** | 点击 Deploy with Vercel，填写 3 个环境变量，约 2 分钟上线 |
+| **免费层可用** | 个人和小团队可直接使用 Vercel 免费层跑起来 |
+| **OpenAI 兼容** | 直接用 OpenAI SDK 对接，零改动 |
 | **多 Provider 路由** | OpenAI · Claude · DeepSeek · MiMo · 自定义 |
+| **多 Key 轮换** | Round-Robin + 429 自动退避 |
 | **多级 Fallback** | Provider → Key 链式故障转移 |
 | **熔断器** | Provider 故障时自动切换 |
 | **Admin 后台** | 密钥管理、配额配置、用量统计、模型测试 |
@@ -43,10 +52,8 @@
 | **Webhook 通知** | 企微 / 飞书 / 钉钉 / Slack，日报 + 超限告警 |
 | **临时 API Key** | HMAC-SHA256 无状态签名，自动过期 |
 | **虚拟模型映射** | 将虚拟模型名路由到真实 Provider |
-| **OpenAI 兼容** | 直接用 OpenAI SDK 对接，零改动 |
-| **一键部署** | 2 分钟部署到 Vercel，免费层即可 |
 
-## 🚀 5 分钟快速上手
+## 🚀 一键部署：2 分钟上线你的 AI API 网关
 
 > **前置条件：** [Vercel 账号](https://vercel.com/signup)（免费）+ 至少一个 AI Provider 的 API Key
 
@@ -98,6 +105,14 @@ npm run dev  # http://localhost:3000
 ```
 
 </details>
+
+## 为什么选择 AI Relay？
+
+- **不用服务器**：跑在 Vercel Edge Runtime，无需 VPS、Docker、运维。
+- **部署足够快**：点击按钮 + 填环境变量，2 分钟完成上线。
+- **成本足够低**：个人开发者和小团队可以从 Vercel 免费层开始。
+- **接入足够简单**：兼容 OpenAI API，现有 SDK 只需改 `base_url`。
+- **容灾足够实用**：多 Provider、多 Key、Fallback、熔断器内置。
 
 ## 📖 使用方法
 

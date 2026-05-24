@@ -2,7 +2,7 @@
 
 <img src="docs/assets/logo-banner.svg" alt="AI Relay" width="400">
 
-**A lightweight, open-source AI API relay service built on Vercel Edge Runtime**
+**Serverless AI API Relay Gateway — deploy to Vercel in one click and run your own multi-provider AI gateway in 2 minutes**
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/MoyuFamily/ai-relay&env=RELAY_API_KEY,RELAY_ADMIN_KEY,RELAY_SIGNING_SECRET&envDescription=API%20authentication%20keys%20(required%20for%20security)&envLink=https://github.com/MoyuFamily/ai-relay#environment-variables)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
@@ -16,10 +16,15 @@
 
 ---
 
+> 🚀 **No server, no Docker, no backend ops.**
+>
+> AI Relay runs on Vercel Edge Runtime. Click **Deploy with Vercel**, set 3 environment variables, and get your own serverless AI API relay gateway for OpenAI, Claude, DeepSeek, and custom providers.
+
 ## Table of Contents
 
 - [Features](#-features)
-- [5-Minute Quick Start](#-5-minute-quick-start)
+- [One-Click Deploy: Launch Your AI API Gateway in 2 Minutes](#-one-click-deploy-launch-your-ai-api-gateway-in-2-minutes)
+- [Why AI Relay?](#why-ai-relay)
 - [Usage](#-usage)
 - [Configuration](#-configuration)
 - [Architecture](#-architecture)
@@ -34,8 +39,12 @@
 
 | Feature | Description |
 |---------|-------------|
-| **Multi-Key Rotation** | Round-Robin with automatic 429 backoff |
+| **Serverless Architecture** | Built on Vercel Edge Runtime — no VPS, no Docker, no backend ops |
+| **One-Click Deploy** | Click Deploy with Vercel, set 3 environment variables, and launch in about 2 minutes |
+| **Free Tier Friendly** | Personal developers and small teams can start on Vercel's free tier |
+| **OpenAI Compatible** | Drop-in replacement for the OpenAI SDK |
 | **Multi-Provider Routing** | OpenAI · Claude · DeepSeek · MiMo · Custom |
+| **Multi-Key Rotation** | Round-Robin with automatic 429 backoff |
 | **Multi-Level Fallback** | Provider → Key chain failover |
 | **Circuit Breaker** | Automatic failover when provider is down |
 | **Admin Dashboard** | Key management, quota config, usage stats, model testing |
@@ -43,10 +52,8 @@
 | **Webhook Notifications** | WeCom / Feishu / DingTalk / Slack — daily reports + alerts |
 | **Temp API Keys** | HMAC-SHA256 stateless signing, auto-expiring |
 | **Virtual Model Mapping** | Route virtual model names to real providers |
-| **OpenAI Compatible** | Drop-in replacement for the OpenAI SDK |
-| **One-Click Deploy** | Deploy to Vercel in 2 minutes, free tier works |
 
-## 🚀 5-Minute Quick Start
+## 🚀 One-Click Deploy: Launch Your AI API Gateway in 2 Minutes
 
 > **Prerequisites:** [Vercel account](https://vercel.com/signup) (free) + at least one AI provider API key
 
@@ -98,6 +105,14 @@ npm run dev  # http://localhost:3000
 ```
 
 </details>
+
+## Why AI Relay?
+
+- **No server required**: Runs on Vercel Edge Runtime — no VPS, Docker, or ops work.
+- **Fast to deploy**: Click a button, set environment variables, and launch in about 2 minutes.
+- **Low starting cost**: Individual developers and small teams can start on Vercel's free tier.
+- **Easy integration**: OpenAI-compatible API; existing SDKs only need a `base_url` change.
+- **Practical resilience**: Multi-provider routing, key rotation, fallback, and circuit breaker built in.
 
 ## 📖 Usage
 
