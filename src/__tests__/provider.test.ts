@@ -71,17 +71,17 @@ describe('mimo-v2.5 provider resolution and mapping tests', () => {
     const codingProvider = await resolveProvider('mimo-v2.5-coding');
     const tudoProvider = await resolveProvider('mimo-v2.5-pro'); // resolves to xiaomi_tudo because of length
 
-    expect(xiaomiProvider?.models.find(m => m.id === 'mimo-v2.5')?.supportsVision).toBe(true);
-    expect(xiaomiProvider?.models.find(m => m.id === 'mimo-v2.5-pro')?.supportsVision).toBe(true);
+    expect(xiaomiProvider?.models?.find(m => m.id === 'mimo-v2.5')?.supportsVision).toBe(true);
+    expect(xiaomiProvider?.models?.find(m => m.id === 'mimo-v2.5-pro')?.supportsVision).toBe(true);
 
-    expect(sgpProvider?.models.find(m => m.id === 'mimo-v2.5-sgp')?.supportsVision).toBe(true);
-    expect(sgpProvider?.models.find(m => m.id === 'mimo-v2.5-pro-sgp')?.supportsVision).toBe(true);
-    expect(sgpProvider?.models.find(m => m.id === 'mimo-v2.5-flash-sgp')?.supportsVision).toBe(true);
+    expect(sgpProvider?.models?.find(m => m.id === 'mimo-v2.5-sgp')?.supportsVision).toBe(true);
+    expect(sgpProvider?.models?.find(m => m.id === 'mimo-v2.5-pro-sgp')?.supportsVision).toBe(true);
+    expect(sgpProvider?.models?.find(m => m.id === 'mimo-v2.5-flash-sgp')?.supportsVision).toBe(true);
 
-    expect(codingProvider?.models.find(m => m.id === 'mimo-v2.5-coding')?.supportsVision).toBe(true);
-    expect(codingProvider?.models.find(m => m.id === 'mimo-v2.5-pro-coding')?.supportsVision).toBe(true);
+    expect(codingProvider?.models?.find(m => m.id === 'mimo-v2.5-coding')?.supportsVision).toBe(true);
+    expect(codingProvider?.models?.find(m => m.id === 'mimo-v2.5-pro-coding')?.supportsVision).toBe(true);
 
-    expect(tudoProvider?.models.find(m => m.id === 'mimo-v2.5')?.supportsVision).toBe(true);
-    expect(tudoProvider?.models.find(m => m.id === 'mimo-v2.5-pro')?.supportsVision).toBe(true);
+    expect(tudoProvider?.models?.find(m => m.id === 'mimo-v2.5')?.supportsVision).toBe(true);
+    expect(tudoProvider?.models?.find(m => m.id === 'mimo-v2.5-pro')?.supportsVision).toBe(true);
   });
 });
