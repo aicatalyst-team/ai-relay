@@ -131,6 +131,15 @@ export function createMemoryMockKV() {
       }
       return [];
     },
+    async srem(key: string, member: string) {
+      const current = store.get(key);
+      if (current instanceof Set) {
+        const existed = current.has(member);
+        current.delete(member);
+        return existed ? 1 : 0;
+      }
+      return 0;
+    },
     pipeline() {
       const commands: Array<() => Promise<any>> = [];
       const proxy: any = new Proxy({}, {

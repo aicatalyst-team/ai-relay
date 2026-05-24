@@ -213,4 +213,32 @@ describe('KV command optimization', () => {
     const pool2 = await getKeyPool(config);
     expect(pool2.keys.map(k => k.key)).toEqual(['sk-healthy-1', 'sk-healthy-2']);
   });
+
+  it('clears key errors from storage when clearKeyErrors is called', async () => {
+    vi.stubEnv('RELAY_KV_ERROR_DETAIL_SAMPLE_RATE', '1');
+    const storage = new KVUsageStorage();
+
+    await storage.recordError({
+      provider: 'openai',
+      keyHash: 'test-hash-to-delete',
+      statusCode: 429,
+      reason: 'Rate limit reached',
+    });
+
+    const errorsBefore = await storage.getKeyErrors();
+    expect(errorsBefore).toContainEqual(
+      expect.objectContaining({
+        keyHash: 'test-hash-to-delete',
+      })
+    );
+
+    await storage.clearKeyErrors('test-hash-to-delete');
+
+    const errorsAfter = await storage.getKeyErrors();
+    expect(errorsAfter).not.toContainEqual(
+      expect.objectContaining({
+        keyHash: 'test-hash-to-delete',
+      })
+    );
+  });
 });

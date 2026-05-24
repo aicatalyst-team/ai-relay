@@ -966,4 +966,24 @@ export class KVUsageStorage implements UsageStorage {
       yesterdayComparison,
     };
   }
+
+  async clearKeyErrors(keyHash: string): Promise<void> {
+    try {
+      const kv = await getKV();
+      if (!kv) return;
+
+      const date = today();
+      const indexKey = kvKeys.errorKeyIndex(date);
+      const errorKey = kvKeys.legacyErrorKeyDaily(keyHash, date);
+
+      await Promise.all([
+        kv.del(errorKey),
+        kv.srem(indexKey, keyHash)
+      ]);
+
+      clearUsageReadCaches();
+    } catch {
+      // Non-critical
+    }
+  }
 }

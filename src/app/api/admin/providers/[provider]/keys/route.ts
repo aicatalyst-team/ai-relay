@@ -5,8 +5,9 @@
 
 import { NextRequest } from 'next/server';
 import { requireAdminAuth, getManagedKeys, addManagedKey, removeManagedKey, setManagedKeys, tryDecodeBase64 } from '@/lib/admin';
-import { hashKey, updateMemoryKeyPool } from '@/lib/relay';
 import { getAllProviders } from '@/lib/providers';
+import { hashKey, updateMemoryKeyPool } from '@/lib/relay';
+import { KVUsageStorage } from '@/lib/usage';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -179,12 +180,17 @@ export async function DELETE(request: NextRequest, { params }: { params: Params 
       body.key = match;
     }
 
+    const keyHash = hashKey(body.key!);
     const remaining = await removeManagedKey(provider, body.key!, envKeys);
     updateMemoryKeyPool(provider, remaining);
 
+    // Clear key errors from storage when a key is deleted
+    const usageStorage = new KVUsageStorage();
+    await usageStorage.clearKeyErrors(keyHash);
+
     return Response.json({
       provider,
-      removedHash: hashKey(body.key!),
+      removedHash: keyHash,
       remainingCount: remaining.length,
       message: 'Key removed',
     });
