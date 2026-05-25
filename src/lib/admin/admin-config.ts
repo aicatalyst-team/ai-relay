@@ -20,7 +20,17 @@ const configCache = new Map<string, ConfigCacheEntry>();
 function getCached<T>(key: string): T | null {
   const entry = configCache.get(key);
   if (entry && Date.now() < entry.expiresAt) return entry.data as T;
+  if (entry) configCache.delete(key);
   return null;
+}
+
+function getCachedEntry<T>(key: string): { hit: true; data: T } | { hit: false } {
+  const entry = configCache.get(key);
+  if (entry && Date.now() < entry.expiresAt) {
+    return { hit: true, data: entry.data as T };
+  }
+  if (entry) configCache.delete(key);
+  return { hit: false };
 }
 
 function setCached(key: string, data: unknown, ttlMs = CONFIG_CACHE_TTL_MS): void {
@@ -38,6 +48,12 @@ function clearCache(prefix?: string): void {
     }
   }
 }
+
+export const __adminConfigCacheForTests = {
+  clear(): void {
+    clearCache();
+  },
+};
 
 export function createMemoryMockKV() {
   const store = new Map<string, any>();
@@ -305,8 +321,8 @@ export async function clearFallbackChain(providerName: string): Promise<void> {
  */
 export async function getManagedKeys(providerName: string, forceRefresh = false): Promise<string[] | null> {
   const cacheKey = `keys:${providerName}`;
-  const cached = forceRefresh ? null : getCached<string[] | null>(cacheKey);
-  if (cached !== null) return cached;
+  const cached = forceRefresh ? { hit: false as const } : getCachedEntry<string[] | null>(cacheKey);
+  if (cached.hit) return cached.data;
 
   const kv = await getKV();
   if (kv) {
@@ -502,8 +518,8 @@ export interface CustomQuotaConfig {
  * Returns null if no custom quota override is configured.
  */
 export async function getCustomQuota(): Promise<CustomQuotaConfig | null> {
-  const cached = getCached<CustomQuotaConfig | null>('quota');
-  if (cached !== null) return cached;
+  const cached = getCachedEntry<CustomQuotaConfig | null>('quota');
+  if (cached.hit) return cached.data;
 
   try {
     const kv = await getKV();
