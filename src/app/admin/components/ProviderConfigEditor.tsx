@@ -543,7 +543,7 @@ export default function ProviderConfigEditor({
                           justifyContent: 'center',
                           flexShrink: 0,
                         }}>{idx + 1}</span>
-                        <span style={{ fontSize: '0.9rem', fontWeight: 'bold', color: '#f3f4f6', flexShrink: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>{fbName}</span>
+                        <span style={{ fontSize: '0.9rem', fontWeight: 'bold', color: '#f3f4f6', flexShrink: 0 }}>{fbName}</span>
                         
                         {/* Model selector */}
                         <select
@@ -563,7 +563,9 @@ export default function ProviderConfigEditor({
                             color: fbModel ? '#60a5fa' : '#9ca3af',
                             fontSize: '0.75rem',
                             outline: 'none',
-                            flexShrink: 0,
+                            maxWidth: '140px',
+                            flexShrink: 1,
+                            minWidth: 0,
                             cursor: 'pointer',
                           }}
                         >
