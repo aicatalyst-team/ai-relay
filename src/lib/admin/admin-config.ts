@@ -438,6 +438,65 @@ export async function getFallbackChain(
 }
 
 /**
+ * Detect circular fallback configurations using DFS.
+ * Returns the cycle path (e.g. ['openai', 'anthropic', 'openai']) if a cycle is found, otherwise null.
+ */
+export async function detectFallbackCycle(
+  providerName: string,
+  proposedChain: string[]
+): Promise<string[] | null> {
+  const { getAllProviders } = await import('../providers');
+  const allProviders = await getAllProviders();
+
+  const fallbackGraph: Record<string, string[]> = {};
+  for (const pName of Object.keys(allProviders)) {
+    if (pName === providerName) {
+      fallbackGraph[pName] = proposedChain.map((entry) => {
+        const colonIdx = entry.indexOf(':');
+        return colonIdx >= 0 ? entry.slice(0, colonIdx) : entry;
+      });
+    } else {
+      const prov = allProviders[pName];
+      const staticFallbacks = prov.fallbackProviders || (prov.fallbackProvider ? [prov.fallbackProvider] : []);
+      const chain = await getFallbackChain(pName, staticFallbacks);
+      fallbackGraph[pName] = chain.map((entry) => {
+        const colonIdx = entry.indexOf(':');
+        return colonIdx >= 0 ? entry.slice(0, colonIdx) : entry;
+      });
+    }
+  }
+
+  const visited = new Set<string>();
+  const path: string[] = [];
+  const pathSet = new Set<string>();
+
+  function dfs(node: string): string[] | null {
+    if (pathSet.has(node)) {
+      const cycleStartIdx = path.indexOf(node);
+      return [...path.slice(cycleStartIdx), node];
+    }
+    if (visited.has(node)) {
+      return null;
+    }
+    path.push(node);
+    pathSet.add(node);
+
+    const neighbors = fallbackGraph[node] || [];
+    for (const neighbor of neighbors) {
+      const cycle = dfs(neighbor);
+      if (cycle) return cycle;
+    }
+
+    path.pop();
+    pathSet.delete(node);
+    visited.add(node);
+    return null;
+  }
+
+  return dfs(providerName);
+}
+
+/**
  * Set the fallback chain for a provider.
  * Pass empty array to clear all fallbacks.
  */
@@ -445,6 +504,11 @@ export async function setFallbackChain(
   providerName: string,
   chain: string[]
 ): Promise<void> {
+  const cycle = await detectFallbackCycle(providerName, chain);
+  if (cycle) {
+    throw new Error(`Circular fallback detected: ${cycle.join(' -> ')}`);
+  }
+
   const kv = await getKV();
   if (!kv) {
     throw new Error('KV storage not configured — cannot persist fallback overrides');

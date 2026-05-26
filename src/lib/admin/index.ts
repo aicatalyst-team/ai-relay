@@ -1,6 +1,7 @@
 export {
   getFallbackChain,
   setFallbackChain,
+  detectFallbackCycle,
   clearFallbackChain,
   getManagedKeys,
   getAllManagedKeys,
