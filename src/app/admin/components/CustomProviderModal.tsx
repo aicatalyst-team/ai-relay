@@ -174,6 +174,20 @@ export default function CustomProviderModal({
     }
   };
 
+  useEffect(() => {
+    if (!customProviderModalOpen) return;
+
+    const previousOverflow = document.body.style.overflow;
+    const previousOverscrollBehavior = document.body.style.overscrollBehavior;
+    document.body.style.overflow = 'hidden';
+    document.body.style.overscrollBehavior = 'contain';
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.body.style.overscrollBehavior = previousOverscrollBehavior;
+    };
+  }, [customProviderModalOpen]);
+
   if (!customProviderModalOpen) return null;
 
   return (
@@ -190,12 +204,16 @@ export default function CustomProviderModal({
       alignItems: 'center',
       zIndex: 1000,
       padding: '1rem',
+      overflow: 'hidden',
+      overscrollBehavior: 'contain',
     }}>
       <div className="glass-panel" style={{
         width: '100%',
         maxWidth: '650px',
         maxHeight: '90vh',
         overflowY: 'auto',
+        overscrollBehavior: 'contain',
+        touchAction: 'pan-y',
         border: '1px solid rgba(255,255,255,0.1)',
         boxShadow: '0 20px 50px rgba(0,0,0,0.5)',
         display: 'flex',

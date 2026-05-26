@@ -122,5 +122,7 @@ describe('iteration one provider CRUD UI helpers', () => {
     expect(html).toContain('百度文心');
     expect(html).toContain('API Key');
     expect(html).toContain('连通性测试');
+    expect(html).toContain('overscroll-behavior:contain');
+    expect(html).toContain('touch-action:pan-y');
   });
 });
