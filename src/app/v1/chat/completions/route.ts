@@ -69,7 +69,7 @@ function wrapStreamWithUsageTracking(
       latencyMs,
       isStream: true,
     });
-    await batchRecorder.record(event);
+    batchRecorder.record(event);
     await recordRequestLog({
       traceId,
       timestamp: new Date().toISOString(),

@@ -31,6 +31,7 @@ export class BatchUsageRecorder {
   private storage: KVUsageStorage | null = null;
   private totalPending = 0;
   private destroyed = false;
+  private flushing = false;
 
   /**
    * Attach the storage backend. Must be called before record().
@@ -100,8 +101,12 @@ export class BatchUsageRecorder {
    * Called on timer, on batch full, or on graceful shutdown.
    */
   async flush(): Promise<void> {
+    if (this.flushing) return;
     if (this.pending.size === 0 && this.errorPending.size === 0) return;
     if (!this.storage) return;
+
+    this.flushing = true;
+    try {
 
     // Swap out pending data atomically
     const usageEntries = new Map(this.pending);
@@ -117,7 +122,7 @@ export class BatchUsageRecorder {
       if (parts[0] === 'global') {
         usagePromises.push(
           this.storage.recordDirect({
-            requestId: `batch_${Date.now()}`,
+            requestId: `batch_${Date.now()}_${key}`,
             provider: '',
             model: '',
             apiKeyHash: '',
@@ -127,12 +132,12 @@ export class BatchUsageRecorder {
             totalTokens: entry.tokens,
             latencyMs: 0,
             isStream: false,
-          })
+          }, entry.requests)
         );
       } else if (parts[0] === 'provider' && parts[1]) {
         usagePromises.push(
           this.storage.recordDirect({
-            requestId: `batch_${Date.now()}`,
+            requestId: `batch_${Date.now()}_${key}`,
             provider: parts[1],
             model: '',
             apiKeyHash: '',
@@ -142,7 +147,7 @@ export class BatchUsageRecorder {
             totalTokens: entry.tokens,
             latencyMs: 0,
             isStream: false,
-          })
+          }, entry.requests)
         );
       }
     }
@@ -158,16 +163,15 @@ export class BatchUsageRecorder {
             keyHash: 'batch',
             statusCode: Number(parts[2]),
             reason: entry.reason,
+            count: entry.count,
           })
         );
       }
     }
 
-    // Fire all writes in parallel, swallow errors (non-critical)
-    try {
       await Promise.allSettled([...usagePromises, ...errorPromises]);
-    } catch {
-      // Non-critical — usage data loss is acceptable
+    } finally {
+      this.flushing = false;
     }
   }
 

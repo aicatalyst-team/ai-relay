@@ -97,6 +97,7 @@ export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
                 padding: '6px 12px',
                 minWidth: 56,
                 minHeight: 44,
+                position: 'relative',
                 color: isActive ? '#6366f1' : '#8888aa',
                 transition: 'color 0.15s',
               }}

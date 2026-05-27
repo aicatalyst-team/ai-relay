@@ -11,7 +11,7 @@
 // - 背景遮罩：rgba(0,0,0,.6) + backdrop-filter: blur(4px)
 // - 关闭方式：下拉手势 / 点击遮罩 / 关闭按钮
 
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef, useCallback, useState } from 'react';
 
 interface BottomSheetProps {
   open: boolean;
@@ -26,6 +26,22 @@ export function BottomSheet({ open, onClose, title, children }: BottomSheetProps
   const startY = useRef(0);
   const currentY = useRef(0);
   const isDragging = useRef(false);
+  const [mounted, setMounted] = useState(open);
+  const [exiting, setExiting] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      setMounted(true);
+      setExiting(false);
+    } else if (mounted) {
+      setExiting(true);
+      const t = setTimeout(() => {
+        setMounted(false);
+        setExiting(false);
+      }, 200);
+      return () => clearTimeout(t);
+    }
+  }, [open, mounted]);
 
   // Close on Escape
   useEffect(() => {
@@ -37,15 +53,15 @@ export function BottomSheet({ open, onClose, title, children }: BottomSheetProps
     return () => document.removeEventListener('keydown', handleKey);
   }, [open, onClose]);
 
-  // Lock body scroll when open
+  // Lock body scroll when mounted
   useEffect(() => {
-    if (open) {
+    if (mounted) {
       document.body.style.overflow = 'hidden';
     } else {
       document.body.style.overflow = '';
     }
     return () => { document.body.style.overflow = ''; };
-  }, [open]);
+  }, [mounted]);
 
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
     startY.current = e.touches[0].clientY;
@@ -73,7 +89,7 @@ export function BottomSheet({ open, onClose, title, children }: BottomSheetProps
     sheetRef.current.style.transform = '';
   }, [onClose]);
 
-  if (!open) return null;
+  if (!mounted) return null;
 
   return (
     <div
@@ -89,7 +105,7 @@ export function BottomSheet({ open, onClose, title, children }: BottomSheetProps
         display: 'flex',
         alignItems: 'flex-end',
         justifyContent: 'center',
-        animation: 'fadeIn 200ms ease-out',
+        animation: exiting ? 'fadeOut 200ms ease-in forwards' : 'fadeIn 200ms ease-out',
       }}
     >
       <div
@@ -106,7 +122,7 @@ export function BottomSheet({ open, onClose, title, children }: BottomSheetProps
           overflow: 'hidden',
           display: 'flex',
           flexDirection: 'column',
-          animation: 'slideUp 250ms ease-out',
+          animation: exiting ? 'slideDown 200ms ease-in forwards' : 'slideUp 250ms ease-out',
         }}
       >
         {/* Drag handle */}
@@ -176,9 +192,17 @@ export function BottomSheet({ open, onClose, title, children }: BottomSheetProps
           from { transform: translateY(100%); }
           to { transform: translateY(0); }
         }
+        @keyframes slideDown {
+          from { transform: translateY(0); }
+          to { transform: translateY(100%); }
+        }
         @keyframes fadeIn {
           from { opacity: 0; }
           to { opacity: 1; }
+        }
+        @keyframes fadeOut {
+          from { opacity: 1; }
+          to { opacity: 0; }
         }
       `}} />
     </div>

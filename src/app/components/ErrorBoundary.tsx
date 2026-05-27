@@ -8,7 +8,7 @@
 // Includes error detail expansion and action buttons.
 
 import { Component, type ReactNode, type ErrorInfo } from 'react';
-import { getErrorMapping, type ErrorMapping } from '@/lib/errors/error-codes';
+import type { ErrorMapping } from '@/lib/errors/error-codes';
 
 interface Props {
   children: ReactNode;

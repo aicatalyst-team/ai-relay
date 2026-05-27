@@ -461,7 +461,7 @@ export default function AdminPage() {
       {error && authenticated && (
         <div style={{ marginBottom: '1.5rem' }}>
           <ErrorDetailPanel
-            statusCode={error.includes('401') ? 401 : error.includes('429') ? 429 : 500}
+            statusCode={error === 'unauthorized' ? 401 : error === 'failed_fetch' ? 502 : 500}
             message={error === 'unauthorized' ? t.invalidKey : (error === 'failed_fetch' ? t.failedFetch : error)}
             onRetry={() => { setError(null); fetchData(true); }}
           />

@@ -559,13 +559,13 @@ export class KVUsageStorage implements UsageStorage {
    * Skips per-event sampling — sampling is handled at the caller level.
    * Writes global + per-provider aggregated counters.
    */
-  async recordDirect(event: UsageEvent): Promise<void> {
+  async recordDirect(event: UsageEvent, requestCount?: number): Promise<void> {
     try {
       const kv = await getKV();
       if (!kv) return;
 
       const date = today();
-      const requestCount = event.promptTokens > 0 || event.completionTokens > 0 ? 1 : 0;
+      const count = requestCount ?? (event.promptTokens > 0 || event.completionTokens > 0 ? 1 : 0);
       const totalTokens = event.totalTokens;
       const promptTokens = event.promptTokens;
       const completionTokens = event.completionTokens;
@@ -580,7 +580,7 @@ export class KVUsageStorage implements UsageStorage {
             kvKeys.legacyKeyTotal(event.apiKeyHash || 'batch'),
           ],
           [
-            String(requestCount || 1),
+            String(count || 1),
             String(totalTokens),
             String(promptTokens),
             String(completionTokens),
@@ -637,13 +637,14 @@ export class KVUsageStorage implements UsageStorage {
 
   /**
    * Direct KV write for batched error data (called by BatchUsageRecorder on flush).
-   * Skips per-event sampling.
+   * Skips per-event sampling. Uses direct hincrby with count for efficiency.
    */
   async recordErrorDirect(event: {
     provider: string;
     keyHash: string;
     statusCode: number;
     reason: string;
+    count?: number;
   }): Promise<void> {
     try {
       const kv = await getKV();
@@ -651,20 +652,17 @@ export class KVUsageStorage implements UsageStorage {
 
       const date = today();
       const status = String(event.statusCode);
+      const count = event.count || 1;
+      const key = kvKeys.errorProviderDaily(event.provider, date);
 
       await withTimeout(
-        runErrorScript(
-          kv,
-          [
-            kvKeys.errorProviderDaily(event.provider, date),
-            kvKeys.legacyErrorKeyDaily(event.keyHash || 'batch', date),
-            kvKeys.errorKeyIndex(date),
-          ],
-          [status, event.reason.slice(0, 200), event.keyHash || 'batch', '0']
-        ),
+        Promise.all([
+          kv.hincrby(key, status, count),
+          kv.expire(key, 604800),
+        ]),
         1000,
         undefined,
-        'recordErrorDirect:eval'
+        'recordErrorDirect:hincrby'
       );
       clearUsageReadCaches();
     } catch {

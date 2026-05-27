@@ -118,6 +118,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
       {children}
       {/* Toast container — top-right on desktop, top-center on mobile */}
       <div
+        className="toast-container"
         style={{
           position: 'fixed',
           top: '1rem',
@@ -134,18 +135,15 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
             .toast-container {
               left: 1rem !important;
               right: 1rem !important;
-              align-items: stretch !important;
             }
             .toast-container > div {
               max-width: 100% !important;
             }
           }
         `}} />
-        <div className="toast-container" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-          {toasts.map(toast => (
-            <ToastItem key={toast.id} toast={toast} onRemove={removeToast} />
-          ))}
-        </div>
+        {toasts.map(toast => (
+          <ToastItem key={toast.id} toast={toast} onRemove={removeToast} />
+        ))}
       </div>
     </ToastContext.Provider>
   );
