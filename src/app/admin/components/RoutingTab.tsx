@@ -322,8 +322,12 @@ export default function RoutingTab({ apiKey, lang }: RoutingTabProps) {
 
   // Switch strategy
   const switchStrategy = async (strategy: RoutingStrategy) => {
-    await saveConfig({ strategy });
-    setMessage(t.strategySwitched);
+    try {
+      await saveConfig({ strategy });
+      setMessage(t.strategySwitched);
+    } catch {
+      // saveConfig already sets error message via its own catch
+    }
   };
 
   // Reset provider failures
@@ -696,7 +700,7 @@ function ProviderCard({
               fontSize: '0.9rem', fontWeight: 600,
               color: provider.successRate >= 0.95 ? '#34d399' : provider.successRate >= 0.8 ? '#fbbf24' : '#f87171',
             }}>
-              {provider.successRate > 0 ? `${Math.round(provider.successRate * 100)}%` : '-'}
+              {provider.status !== 'unknown' ? `${Math.round(provider.successRate * 100)}%` : '-'}
             </div>
           </div>
 

@@ -593,7 +593,7 @@ export default function SecurityTab({ apiKey, lang }: SecurityTabProps) {
                         letterSpacing: '1px',
                         ...(isCritical ? { animation: 'pulse-r 2s infinite' } : {}),
                       }}>
-                        {k.keyHash.slice(0, 4)}****{k.keyHash.slice(-4)}
+                        {k.keyHash.slice(0, 4)}{'*'.repeat(8)}{k.keyHash.slice(-4)}
                       </span>
                     </td>
                     <td style={{ padding: '12px', borderBottom: '1px solid rgba(255,255,255,0.03)', fontSize: '13px' }}>
@@ -729,7 +729,7 @@ export default function SecurityTab({ apiKey, lang }: SecurityTabProps) {
             <div style={{ fontSize: '13px', color: '#9ca3af', marginBottom: '20px' }}>
               {rotateTarget.provider} · key-{rotateTarget.keyIndex} ·{' '}
               <span style={{ fontFamily: "'SF Mono', Monaco, monospace", letterSpacing: '1px' }}>
-                {rotateTarget.keyHash.slice(0, 4)}****{rotateTarget.keyHash.slice(-4)}
+                {rotateTarget.keyHash.slice(0, 4)}{'*'.repeat(8)}{rotateTarget.keyHash.slice(-4)}
               </span>
             </div>
 
@@ -864,7 +864,7 @@ export default function SecurityTab({ apiKey, lang }: SecurityTabProps) {
                       fontFamily: "'SF Mono', Monaco, monospace", fontSize: '12px',
                       color: '#9ca3af', letterSpacing: '1px',
                     }}>
-                      {rotateTarget.keyHash.slice(0, 4)}****{rotateTarget.keyHash.slice(-4)}
+                      {rotateTarget.keyHash.slice(0, 4)}{'*'.repeat(8)}{rotateTarget.keyHash.slice(-4)}
                     </div>
                     <div style={{ fontSize: '11px', color: '#f87171', marginTop: '8px' }}>
                       {t.deactivated}

@@ -79,7 +79,8 @@ function scoreByAvailability(health: ProviderHealthInfo): number {
 export async function routeByStrategy(
   config: RoutingConfig,
   healthData: Map<string, ProviderHealthInfo>,
-  preferredProvider?: string
+  preferredProvider?: string,
+  preloadedLatency?: Map<string, LatencyStats>
 ): Promise<RoutingDecision> {
   const providers = Array.from(healthData.keys());
   if (providers.length === 0) {
@@ -91,10 +92,12 @@ export async function routeByStrategy(
     };
   }
 
-  // Collect latency stats for all providers
-  const latencyMap = new Map<string, LatencyStats>();
-  for (const p of providers) {
-    latencyMap.set(p, await getLatencyStats(p));
+  // Use pre-loaded latency stats if available (avoids N KV reads on cold start)
+  const latencyMap = preloadedLatency ?? new Map<string, LatencyStats>();
+  if (!preloadedLatency) {
+    for (const p of providers) {
+      latencyMap.set(p, await getLatencyStats(p));
+    }
   }
 
   // Score each provider based on strategy
@@ -130,15 +133,14 @@ export async function routeByStrategy(
   // Sort by score (ascending — lower is better)
   scored.sort((a, b) => a.score - b.score);
 
-  // If preferred provider is available and not down, give it a boost
+  // If preferred provider is available and not down, promote to first position
   if (preferredProvider) {
     const preferredIdx = scored.findIndex((s) => s.provider === preferredProvider);
     if (preferredIdx > 0) {
       const preferredHealth = healthData.get(preferredProvider);
       if (preferredHealth && preferredHealth.status !== 'down') {
-        // Move preferred provider up by 1 position (but not past #1)
         const entry = scored.splice(preferredIdx, 1)[0];
-        scored.splice(Math.max(0, preferredIdx - 1), 0, entry);
+        scored.unshift(entry);
       }
     }
   }

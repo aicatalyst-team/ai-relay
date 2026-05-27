@@ -15,6 +15,10 @@ const latencyCache = new Map<string, LatencyRecord[]>();
 const CACHE_TTL_MS = 30_000; // 30s
 const cacheTimestamps = new Map<string, number>();
 
+/** Write debounce: minimum interval between KV writes per provider */
+const WRITE_INTERVAL_MS = 60_000; // 60s
+const lastWriteAt = new Map<string, number>();
+
 /** Max samples per provider (sliding window) */
 const MAX_SAMPLES = 100;
 
@@ -57,16 +61,19 @@ async function loadFromKV(provider: string): Promise<LatencyRecord[]> {
 }
 
 /**
- * Save latency records to KV (fire-and-forget).
+ * Save latency records to KV (debounced, fire-and-forget).
  */
 function saveToKV(provider: string, records: LatencyRecord[]): void {
+  const now = Date.now();
+  const lastWrite = lastWriteAt.get(provider) || 0;
+  if (now - lastWrite < WRITE_INTERVAL_MS) return;
+  lastWriteAt.set(provider, now);
+
   getKV().then((kv: any) => {
     if (kv) {
-      kv.set(`${KV_PREFIX}${provider}`, JSON.stringify(records), { ex: KV_TTL_SECONDS });
+      kv.set(`${KV_PREFIX}${provider}`, records, { ex: KV_TTL_SECONDS });
     }
-  }).catch(() => {
-    // Silent — KV save is non-critical
-  });
+  }).catch(() => {});
 }
 
 /**
@@ -155,14 +162,19 @@ export async function getLatencyStats(provider: string): Promise<LatencyStats> {
  * Get all latency stats (for admin dashboard).
  */
 export async function getAllLatencyStats(): Promise<Record<string, LatencyStats>> {
-  // Scan KV for all latency keys
   try {
     const kv = await getKV();
     if (!kv) return {};
 
-    const [cursor, keys] = await kv.scan(0, { match: `${KV_PREFIX}*`, count: 100 });
-    const stats: Record<string, LatencyStats> = {};
+    const keys: string[] = [];
+    let cursor: string | number = 0;
+    do {
+      const result: [string | number, string[]] = await kv.scan(cursor, { match: `${KV_PREFIX}*`, count: 100 });
+      keys.push(...result[1]);
+      cursor = result[0];
+    } while (cursor !== 0 && cursor !== '0');
 
+    const stats: Record<string, LatencyStats> = {};
     for (const key of keys) {
       const provider = key.replace(KV_PREFIX, '');
       stats[provider] = await getLatencyStats(provider);

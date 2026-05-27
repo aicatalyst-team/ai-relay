@@ -115,8 +115,6 @@ export async function relayRequest(
         () => tryProviderWithRetries(effectiveProvider, body, apiKey, maxRetries, apiType)
       );
       if (primaryResult.result) {
-        // Record success for smart routing
-        recordProviderResult(effectiveProvider.name, true, 0);
         return primaryResult.result;
       }
     } else {
@@ -179,12 +177,8 @@ export async function relayRequest(
       () => tryProviderWithRetries(fbProvider, fbBody, fbKey, fbMaxRetries, apiType)
     );
     if (fbResult.result) {
-      // Record success for smart routing
-      recordProviderResult(fbProvider.name, true, 0);
       return fbResult.result;
     }
-    // Record failure for smart routing
-    recordProviderResult(fbProvider.name, false, 0);
     errors.push({ provider: fbProvider.displayName, error: fbResult.lastError?.message || 'unknown error' });
   }
 

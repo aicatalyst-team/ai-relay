@@ -223,12 +223,6 @@ export async function resolveFallbackModel(originalModel: string, targetProvider
       }
       return 'mimo-v2.5-pro-coding';
 
-    case 'xiaomi_tudo':
-      if (lowerModel.includes('mimo-v2.5') && !lowerModel.includes('pro')) {
-        return 'mimo-v2.5';
-      }
-      return 'mimo-v2.5-pro';
-
     case 'openai':
       if (
         lowerModel.includes('gpt-5.5') ||
@@ -258,9 +252,6 @@ export async function resolveFallbackModel(originalModel: string, targetProvider
         return 'claude-haiku-4-5-20251001';
       }
       return 'claude-sonnet-4-6';
-
-    case 'lpgpt':
-      return 'gpt-5.4';
 
     default:
       // Fallback: use the first model ID in the provider's model list if available

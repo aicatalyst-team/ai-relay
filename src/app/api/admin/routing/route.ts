@@ -70,7 +70,7 @@ export async function PUT(request: NextRequest) {
     // Validate numeric fields
     const partial: Partial<RoutingConfig> = {};
     if (body.strategy) partial.strategy = body.strategy;
-    if (typeof body.maxLatencyMs === 'number') partial.maxLatencyMs = body.maxLatencyMs;
+    if (typeof body.maxLatencyMs === 'number') partial.maxLatencyMs = Math.max(100, Math.min(60000, body.maxLatencyMs));
     if (typeof body.failureThreshold === 'number') partial.failureThreshold = Math.max(1, Math.min(20, body.failureThreshold));
     if (typeof body.recoverySeconds === 'number') partial.recoverySeconds = Math.max(5, Math.min(300, body.recoverySeconds));
     if (typeof body.stickySession === 'boolean') partial.stickySession = body.stickySession;

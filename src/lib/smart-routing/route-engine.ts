@@ -13,6 +13,7 @@ import type {
   RoutingStatus,
   ProviderHealthInfo,
   ProviderHealthStatus,
+  LatencyStats,
 } from './types';
 import { getKV } from './kv-client';
 import { getLatencyStats, getSuccessRate, recordLatency } from './latency-tracker';
@@ -191,8 +192,9 @@ export function hasRecovered(provider: string, config?: RoutingConfig): boolean 
   const lastSuccess = lastSuccessAt.get(provider) || 0;
   const lastFailure = lastFailureAt.get(provider) || 0;
 
-  // If last success is more recent than last failure and stable for recoveryMs
-  return lastSuccess > lastFailure && (Date.now() - lastSuccess) >= recoveryMs;
+  // Recovered when there's been a success after the last failure AND
+  // at least recoveryMs has elapsed since that last failure.
+  return lastSuccess > lastFailure && (Date.now() - lastFailure) >= recoveryMs;
 }
 
 // ---------------------------------------------------------------------------
@@ -213,27 +215,45 @@ export async function smartRoute(
 ): Promise<RoutingDecision> {
   const config = await getRoutingConfig();
 
-  // Build health map if not provided
   if (!providerHealthMap) {
     providerHealthMap = new Map();
-    // At minimum, include the requested provider
-    providerHealthMap.set(requestedProvider, await getProviderHealth(requestedProvider));
+    const { getAllProviders } = await import('../providers');
+    const allProviders = await getAllProviders();
+    const { getKeyPoolStats } = await import('../relay/key-pool');
+    const poolStats = getKeyPoolStats() as Record<string, { total: number; available: number }>;
+
+    for (const [name, p] of Object.entries(allProviders)) {
+      const health = await getProviderHealth(name, p.displayName);
+      const stats = poolStats[name];
+      if (stats) {
+        health.availableKeys = stats.available;
+        health.totalKeys = stats.total;
+      }
+      providerHealthMap.set(name, health);
+    }
   }
 
-  // Check if requested provider should be failed over
+  // Build latency map once — cache is warm from getProviderHealth calls above
+  const latencyMap = new Map<string, LatencyStats>();
+  for (const name of providerHealthMap.keys()) {
+    latencyMap.set(name, await getLatencyStats(name));
+  }
+
+  // If recovery condition is met, clear the failure counter so the provider becomes eligible again.
+  if (hasRecovered(requestedProvider, config)) {
+    failureCounters.set(requestedProvider, 0);
+  }
+
   if (shouldFailover(requestedProvider, config)) {
-    // Find best alternative
-    const decision = await routeByStrategy(config, providerHealthMap, undefined);
+    const decision = await routeByStrategy(config, providerHealthMap, undefined, latencyMap);
     if (decision.provider !== requestedProvider) {
       logSwitch(requestedProvider, decision.provider, `Auto-failover: ${failureCounters.get(requestedProvider)} consecutive failures`);
       return decision;
     }
   }
 
-  // Use strategy engine to route
-  const decision = await routeByStrategy(config, providerHealthMap, requestedProvider);
+  const decision = await routeByStrategy(config, providerHealthMap, requestedProvider, latencyMap);
 
-  // Log if the routing engine chose a different provider than requested
   if (decision.provider !== requestedProvider) {
     logSwitch(requestedProvider, decision.provider, decision.reason);
   }
@@ -251,8 +271,16 @@ export async function getRoutingStatus(
   const config = await getRoutingConfig();
   const activeProviders: ProviderHealthInfo[] = [];
 
+  const { getKeyPoolStats } = await import('../relay/key-pool');
+  const poolStats = getKeyPoolStats() as Record<string, { total: number; available: number }>;
+
   for (const name of providerNames) {
     const health = await getProviderHealth(name, displayNames?.[name]);
+    const stats = poolStats[name];
+    if (stats) {
+      health.availableKeys = stats.available;
+      health.totalKeys = stats.total;
+    }
     activeProviders.push(health);
   }
 
@@ -271,8 +299,8 @@ export async function getRoutingStatus(
 
 function logSwitch(from: string, to: string, reason: string): void {
   recentSwitches.push({ from, to, reason, timestamp: Date.now() });
-  if (recentSwitches.length > MAX_SWITCH_LOG) {
-    recentSwitches.splice(0, recentSwitches.length - MAX_SWITCH_LOG);
+  while (recentSwitches.length > MAX_SWITCH_LOG) {
+    recentSwitches.shift();
   }
 }
 

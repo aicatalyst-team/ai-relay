@@ -3,6 +3,7 @@
 // ============================================================
 
 import type { ApiKey, KeyPool, ProviderConfig } from '../providers/types';
+import { createHash } from 'crypto';
 
 /** In-memory key pools (cold start init, refreshed periodically) */
 const keyPools = new Map<string, KeyPool>();
@@ -25,14 +26,10 @@ function keyVersionCheckTtlMs(): number {
 
 /**
  * Hash a key to a short identifier (for KV storage / logging).
- * Uses djb2 — fast, no crypto dependency.
+ * Uses SHA-256 truncated to 16 hex chars for collision resistance.
  */
 export function hashKey(key: string): string {
-  let hash = 5381;
-  for (let i = 0; i < key.length; i++) {
-    hash = ((hash << 5) + hash + key.charCodeAt(i)) >>> 0;
-  }
-  return hash.toString(16).padStart(8, '0');
+  return createHash('sha256').update(key).digest('hex').slice(0, 16);
 }
 
 /**
