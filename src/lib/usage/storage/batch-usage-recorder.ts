@@ -238,14 +238,19 @@ export function getBatchRecorder(): BatchUsageRecorder {
   if (!_batchRecorder) {
     _batchRecorder = new BatchUsageRecorder();
 
-    // Best-effort graceful shutdown (works in long-running processes)
-    if (typeof process !== 'undefined') {
+    // Best-effort graceful shutdown — only in Node.js (not Edge/Workers runtimes
+    // where process.on exists but is a no-op or throws).
+    if (typeof process !== 'undefined' && typeof process.on === 'function') {
       const shutdown = () => {
         _batchRecorder?.flush().catch(() => {});
       };
-      process.on('SIGTERM', shutdown);
-      process.on('SIGINT', shutdown);
-      process.on('beforeExit', shutdown);
+      try {
+        process.on('SIGTERM', shutdown);
+        process.on('SIGINT', shutdown);
+        process.on('beforeExit', shutdown);
+      } catch {
+        // Edge/Workers runtimes may throw on unsupported signals — ignore
+      }
     }
   }
   return _batchRecorder;
