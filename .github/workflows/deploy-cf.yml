@@ -162,28 +162,28 @@ jobs:
             exit 1
           fi
 
-          CACHE_DIR="$CACHE_DIR" node <<'NODE'
-          const fs = require('fs');
-          const path = require('path');
+          CACHE_DIR="$CACHE_DIR" node -e '
+            const fs = require("fs");
+            const path = require("path");
 
-          const cacheDir = process.env.CACHE_DIR;
-          const outputRoot = '.open-next';
-          const entries = [
-            ['index.cache', 'index.html'],
-            ['admin.cache', path.join('admin', 'index.html')],
-            ['_not-found.cache', '404.html'],
-          ];
+            const cacheDir = process.env.CACHE_DIR;
+            const outputRoot = ".open-next";
+            const entries = [
+              ["index.cache", "index.html"],
+              ["admin.cache", path.join("admin", "index.html")],
+              ["_not-found.cache", "404.html"]
+            ];
 
-          for (const [source, target] of entries) {
-            const input = path.join(cacheDir, source);
-            if (!fs.existsSync(input)) continue;
-            const payload = JSON.parse(fs.readFileSync(input, 'utf8'));
-            if (!payload?.html) continue;
-            const output = path.join(outputRoot, target);
-            fs.mkdirSync(path.dirname(output), { recursive: true });
-            fs.writeFileSync(output, payload.html);
-          }
-NODE
+            for (const [source, target] of entries) {
+              const input = path.join(cacheDir, source);
+              if (!fs.existsSync(input)) continue;
+              const payload = JSON.parse(fs.readFileSync(input, "utf8"));
+              if (!payload || !payload.html) continue;
+              const output = path.join(outputRoot, target);
+              fs.mkdirSync(path.dirname(output), { recursive: true });
+              fs.writeFileSync(output, payload.html);
+            }
+          '
 
           # Rename worker.js to _worker.js to enable Pages Functions
           if [ -f ".open-next/worker.js" ]; then
