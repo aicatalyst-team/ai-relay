@@ -183,23 +183,47 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          SYNC_RELAY_API_KEY: ${{ secrets.RELAY_API_KEY || vars.RELAY_API_KEY }}
+          SYNC_RELAY_ADMIN_KEY: ${{ secrets.RELAY_ADMIN_KEY || vars.RELAY_ADMIN_KEY }}
+          SYNC_RELAY_SIGNING_SECRET: ${{ secrets.RELAY_SIGNING_SECRET || vars.RELAY_SIGNING_SECRET }}
+          SYNC_CRON_SECRET: ${{ secrets.CRON_SECRET || vars.CRON_SECRET }}
+          SYNC_OPENAI_KEYS: ${{ secrets.OPENAI_KEYS || vars.OPENAI_KEYS }}
+          SYNC_CLAUDE_KEYS: ${{ secrets.CLAUDE_KEYS || vars.CLAUDE_KEYS }}
+          SYNC_DEEPSEEK_KEYS: ${{ secrets.DEEPSEEK_KEYS || vars.DEEPSEEK_KEYS }}
+          SYNC_XIAOMI_KEYS: ${{ secrets.XIAOMI_KEYS || vars.XIAOMI_KEYS }}
+          SYNC_XIAOMI_CODING_KEYS: ${{ secrets.XIAOMI_CODING_KEYS || vars.XIAOMI_CODING_KEYS }}
+          SYNC_XIAOMIMIMO_SGP_CODING_KEYS: ${{ secrets.XIAOMIMIMO_SGP_CODING_KEYS || vars.XIAOMIMIMO_SGP_CODING_KEYS }}
+          SYNC_OPENAI_BASE_URL: ${{ secrets.OPENAI_BASE_URL || vars.OPENAI_BASE_URL }}
+          SYNC_CLAUDE_BASE_URL: ${{ secrets.CLAUDE_BASE_URL || vars.CLAUDE_BASE_URL }}
+          SYNC_DEEPSEEK_BASE_URL: ${{ secrets.DEEPSEEK_BASE_URL || vars.DEEPSEEK_BASE_URL }}
+          SYNC_XIAOMI_BASE_URL: ${{ secrets.XIAOMI_BASE_URL || vars.XIAOMI_BASE_URL }}
+          SYNC_XIAOMI_CODING_BASE_URL: ${{ secrets.XIAOMI_CODING_BASE_URL || vars.XIAOMI_CODING_BASE_URL }}
+          SYNC_XIAOMIMIMO_SGP_CODING_BASE_URL: ${{ secrets.XIAOMIMIMO_SGP_CODING_BASE_URL || vars.XIAOMIMIMO_SGP_CODING_BASE_URL }}
+          SYNC_RELAY_DAILY_LIMIT: ${{ secrets.RELAY_DAILY_LIMIT || vars.RELAY_DAILY_LIMIT }}
+          SYNC_RELAY_MONTHLY_LIMIT: ${{ secrets.RELAY_MONTHLY_LIMIT || vars.RELAY_MONTHLY_LIMIT }}
+          SYNC_RELAY_MAX_CONCURRENT: ${{ secrets.RELAY_MAX_CONCURRENT || vars.RELAY_MAX_CONCURRENT }}
+          SYNC_RELAY_MAX_QUEUE: ${{ secrets.RELAY_MAX_QUEUE || vars.RELAY_MAX_QUEUE }}
+          SYNC_RELAY_KEY_POOL_VERSION_CHECK_TTL_MS: ${{ secrets.RELAY_KEY_POOL_VERSION_CHECK_TTL_MS || vars.RELAY_KEY_POOL_VERSION_CHECK_TTL_MS }}
+          SYNC_RELAY_KV_KEY_USAGE_MODE: ${{ secrets.RELAY_KV_KEY_USAGE_MODE || vars.RELAY_KV_KEY_USAGE_MODE }}
+          SYNC_RELAY_KV_USAGE_SAMPLE_RATE: ${{ secrets.RELAY_KV_USAGE_SAMPLE_RATE || vars.RELAY_KV_USAGE_SAMPLE_RATE }}
+          SYNC_RELAY_KV_KEY_USAGE_SAMPLE_RATE: ${{ secrets.RELAY_KV_KEY_USAGE_SAMPLE_RATE || vars.RELAY_KV_KEY_USAGE_SAMPLE_RATE }}
+          SYNC_RELAY_KV_ERROR_DETAIL_SAMPLE_RATE: ${{ secrets.RELAY_KV_ERROR_DETAIL_SAMPLE_RATE || vars.RELAY_KV_ERROR_DETAIL_SAMPLE_RATE }}
+          SYNC_ENABLE_REQUEST_LOGS: ${{ secrets.ENABLE_REQUEST_LOGS || vars.ENABLE_REQUEST_LOGS }}
+          SYNC_REQUEST_LOGS_MAX_ENTRIES: ${{ secrets.REQUEST_LOGS_MAX_ENTRIES || vars.REQUEST_LOGS_MAX_ENTRIES }}
+          SYNC_CORS_ORIGINS: ${{ secrets.CORS_ORIGINS || vars.CORS_ORIGINS }}
         run: |
           export CLOUDFLARE_API_TOKEN="${CLOUDFLARE_API_TOKEN}"
           export CLOUDFLARE_ACCOUNT_ID="${CLOUDFLARE_ACCOUNT_ID}"
 
-          # Configure required environment variables
-          if [ -n "${{ secrets.RELAY_API_KEY }}" ]; then
-            echo "${{ secrets.RELAY_API_KEY }}" | pnpm exec wrangler pages secret put RELAY_API_KEY --project-name=ai-relay
-          fi
-
-          if [ -n "${{ secrets.RELAY_ADMIN_KEY }}" ]; then
-            echo "${{ secrets.RELAY_ADMIN_KEY }}" | pnpm exec wrangler pages secret put RELAY_ADMIN_KEY --project-name=ai-relay
-          fi
-
-          if [ -n "${{ secrets.RELAY_SIGNING_SECRET }}" ]; then
-            echo "${{ secrets.RELAY_SIGNING_SECRET }}" | pnpm exec wrangler pages secret put RELAY_SIGNING_SECRET --project-name=ai-relay
-          fi
-
-          if [ -n "${{ secrets.CRON_SECRET }}" ]; then
-            echo "${{ secrets.CRON_SECRET }}" | pnpm exec wrangler pages secret put CRON_SECRET --project-name=ai-relay
-          fi
+          # 动态遍历环境变量中所有以 SYNC_ 开头的变量并推送到 CF Pages
+          for var_name in $(env | grep -oE '^SYNC_[A-Z0-9_]+' | sort -u); do
+            # 提取原变量名
+            target_name="${var_name#SYNC_}"
+            # 获取变量的值
+            val="${!var_name}"
+            
+            if [ -n "$val" ]; then
+              echo "Syncing $target_name..."
+              echo "$val" | pnpm exec wrangler pages secret put "$target_name" --project-name=ai-relay
+            fi
+          done
