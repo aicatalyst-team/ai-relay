@@ -43,6 +43,7 @@ export default function CustomProviderModal({
   const [formBaseUrl, setFormBaseUrl] = useState('');
   const [formHeaderFormat, setFormHeaderFormat] = useState<'openai' | 'anthropic' | 'azure'>('openai');
   const [formModelPrefixes, setFormModelPrefixes] = useState('');
+  const [formUserAgent, setFormUserAgent] = useState('');
   const [formModels, setFormModels] = useState<any[]>([]);
   const [selectedTemplateId, setSelectedTemplateId] = useState('openai');
   const [apiKeyValue, setApiKeyValue] = useState('');
@@ -65,6 +66,7 @@ export default function CustomProviderModal({
     setFormBaseUrl(form.baseUrl);
     setFormHeaderFormat(form.headerFormat);
     setFormModelPrefixes(form.modelPrefixes.join(', '));
+    setFormUserAgent('');
     setTestModelId(form.modelPrefixes[0] ? `${form.modelPrefixes[0]}demo` : '');
     setTestState({ status: 'idle', message: '' });
     setModelFetchState({ status: 'idle', message: '' });
@@ -83,6 +85,7 @@ export default function CustomProviderModal({
       setFormBaseUrl(editingCustomProvider.baseUrl || '');
       setFormHeaderFormat(editingCustomProvider.headerFormat || 'openai');
       setFormModelPrefixes((editingCustomProvider.modelPrefixes || []).join(', '));
+      setFormUserAgent(editingCustomProvider.userAgent || '');
       setFormModels(editingCustomProvider.models || []);
       setFetchedProviderModels([]);
     } else {
@@ -94,6 +97,7 @@ export default function CustomProviderModal({
       setFormBaseUrl(form.baseUrl);
       setFormHeaderFormat(form.headerFormat);
       setFormModelPrefixes(form.modelPrefixes.join(', '));
+      setFormUserAgent('');
       setFormModels([]);
       setApiKeyValue('');
       setTestModelId(form.modelPrefixes[0] ? `${form.modelPrefixes[0]}demo` : '');
@@ -139,6 +143,7 @@ export default function CustomProviderModal({
     baseUrl: formBaseUrl,
     headerFormat: formHeaderFormat,
     modelPrefixesText: formModelPrefixes,
+    userAgent: formUserAgent,
     models: formModels,
   });
   const providerValidation = validateDraftProvider(draftProvider);
@@ -510,6 +515,33 @@ export default function CustomProviderModal({
             </div>
           </div>
 
+          <div>
+            <label style={{ display: 'block', fontSize: '0.85rem', color: '#9ca3af', marginBottom: '0.3rem' }}>
+              User-Agent {lang === 'zh' ? '(可选)' : '(Optional)'}
+            </label>
+            <input
+              type="text"
+              placeholder="e.g. Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
+              value={formUserAgent}
+              onChange={(e) => setFormUserAgent(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '0.6rem 0.8rem',
+                borderRadius: '6px',
+                border: '1px solid rgba(255, 255, 255, 0.08)',
+                backgroundColor: 'rgba(0, 0, 0, 0.25)',
+                color: '#fff',
+                fontSize: '0.9rem',
+                boxSizing: 'border-box',
+              }}
+            />
+            <div style={{ fontSize: '0.72rem', color: '#6b7280', marginTop: '0.35rem' }}>
+              {lang === 'zh'
+                ? '自定义发送给上游的 User-Agent。留空则使用默认 SDK User-Agent。'
+                : 'Custom User-Agent sent to upstream. Leave empty to use default SDK User-Agent.'}
+            </div>
+          </div>
+
           {/* Models List Section */}
           <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '1rem', marginTop: '0.5rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
@@ -843,6 +875,7 @@ export default function CustomProviderModal({
                 baseUrl: formBaseUrl.trim(),
                 headerFormat: formHeaderFormat,
                 modelPrefixes: prefixes,
+                userAgent: formUserAgent.trim() || undefined,
                 models: formModels
               });
             }}

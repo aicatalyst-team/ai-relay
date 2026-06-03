@@ -31,6 +31,7 @@ export interface DraftProviderPayload {
   headerFormat: ProviderHeaderFormat;
   modelPrefixes: string[];
   envKeyField: string;
+  userAgent?: string;
   models: Array<{
     id: string;
     displayName: string;
@@ -193,9 +194,11 @@ export function buildDraftProvider(input: {
   baseUrl: string;
   headerFormat: ProviderHeaderFormat;
   modelPrefixesText: string;
+  userAgent?: string;
   models: DraftProviderPayload['models'];
 }): DraftProviderPayload {
   const name = input.id.trim();
+  const userAgent = input.userAgent?.trim();
   return {
     name,
     displayName: input.displayName.trim(),
@@ -203,6 +206,7 @@ export function buildDraftProvider(input: {
     headerFormat: input.headerFormat,
     modelPrefixes: parseModelPrefixes(input.modelPrefixesText),
     envKeyField: buildEnvKeyField(name),
+    userAgent: userAgent || undefined,
     models: input.models,
   };
 }
