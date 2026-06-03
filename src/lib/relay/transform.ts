@@ -40,7 +40,8 @@ export function transformToAnthropic(body: ChatCompletionRequest): Record<string
 export function buildHeaders(
   headerFormat: 'openai' | 'anthropic' | 'azure',
   apiKey: string,
-  isStream: boolean
+  isStream: boolean,
+  userAgent?: string
 ): Record<string, string> {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
@@ -57,6 +58,10 @@ export function buildHeaders(
 
   if (isStream) {
     headers['Accept'] = 'text/event-stream';
+  }
+
+  if (userAgent) {
+    headers['User-Agent'] = userAgent;
   }
 
   return headers;

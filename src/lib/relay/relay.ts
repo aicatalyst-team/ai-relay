@@ -63,7 +63,8 @@ function recordError(
  */
 export async function relayRequest(
   body: RelayRequestBody,
-  apiType: RelayApiType = 'chat'
+  apiType: RelayApiType = 'chat',
+  userAgent?: string
 ): Promise<RelayResult> {
   const provider = await resolveProvider(body.model);
   if (!provider) {
@@ -140,7 +141,7 @@ export async function relayRequest(
 
       // Try primary provider with retries (with concurrency control)
       primaryResult = await withConcurrency(
-        () => tryProviderWithRetries(effectiveProvider, body, apiKey, maxRetries, apiType, smartRoutingConfigured)
+        () => tryProviderWithRetries(effectiveProvider, body, apiKey, maxRetries, apiType, smartRoutingConfigured, userAgent)
       );
       if (primaryResult.result) {
         return primaryResult.result;
@@ -208,7 +209,7 @@ export async function relayRequest(
     }
 
     const fbResult = await withConcurrency(
-      () => tryProviderWithRetries(fbProvider, fbBody, fbKey, fbMaxRetries, apiType, smartRoutingConfigured)
+      () => tryProviderWithRetries(fbProvider, fbBody, fbKey, fbMaxRetries, apiType, smartRoutingConfigured, userAgent)
     );
     if (fbResult.result) {
       return fbResult.result;
@@ -234,7 +235,8 @@ async function tryProviderWithRetries(
   initialKey: ApiKey | null,
   maxRetries: number,
   apiType: RelayApiType = 'chat',
-  smartRoutingConfigured = false
+  smartRoutingConfigured = false,
+  userAgent?: string
 ): Promise<{ result: RelayResult | null; lastError: Error | null }> {
   let currentKey = initialKey;
   let lastError: Error | null = null;
@@ -295,7 +297,7 @@ async function tryProviderWithRetries(
     try {
       const upstreamResponse = await fetch(url, {
         method: 'POST',
-        headers: buildHeaders(provider.headerFormat, currentKey.key, !!body.stream),
+        headers: buildHeaders(provider.headerFormat, currentKey.key, !!body.stream, userAgent),
         body: JSON.stringify(requestBody),
       });
 
