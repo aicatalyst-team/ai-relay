@@ -98,10 +98,10 @@ jobs:
           KV_LIST=$(pnpm exec wrangler kv namespace list 2>/dev/null || echo "[]")
           echo "KV namespaces found: $(echo "$KV_LIST" | jq 'length' 2>/dev/null || echo 'unknown')"
 
-          # Search for existing namespace — title format is "<worker_name>-<binding>"
-          # Check all possible titles from current and previous workflow versions
+          # Search for existing namespace.
+          # Possible titles: wrangler may generate "KV", "ai-relay-KV", or legacy variants.
           KV_ID=""
-          for TITLE in "ai-relay-KV" "ai-relay" "ai-relay-ai-relay"; do
+          for TITLE in "KV" "ai-relay-KV" "ai-relay" "ai-relay-ai-relay"; do
             FOUND=$(echo "$KV_LIST" | jq -r ".[] | select(.title == \"${TITLE}\") | .id" 2>/dev/null || echo "")
             if [ -n "$FOUND" ] && [ "$FOUND" != "null" ]; then
               KV_ID="$FOUND"
@@ -112,13 +112,27 @@ jobs:
 
           if [ -z "$KV_ID" ]; then
             echo "No existing KV namespace found, creating one..."
-            # Use binding name "KV" → title becomes "ai-relay-KV"
             KV_OUTPUT=$(pnpm exec wrangler kv namespace create KV 2>&1 || true)
             echo "$KV_OUTPUT"
-            # Extract id: try JSON first, then regex fallback
-            KV_ID=$(echo "$KV_OUTPUT" | jq -r '.id' 2>/dev/null || echo "")
-            if [ -z "$KV_ID" ] || [ "$KV_ID" = "null" ]; then
-              KV_ID=$(echo "$KV_OUTPUT" | grep -oE '[0-9a-f]{32}' | head -1 || echo "")
+
+            # If wrangler reports "already exists", re-fetch the list and find it
+            if echo "$KV_OUTPUT" | grep -qi "already exists"; then
+              echo "Namespace already exists (title conflict); re-fetching list to obtain id..."
+              KV_LIST=$(pnpm exec wrangler kv namespace list 2>/dev/null || echo "[]")
+              for TITLE in "KV" "ai-relay-KV" "ai-relay" "ai-relay-ai-relay"; do
+                FOUND=$(echo "$KV_LIST" | jq -r ".[] | select(.title == \"${TITLE}\") | .id" 2>/dev/null || echo "")
+                if [ -n "$FOUND" ] && [ "$FOUND" != "null" ]; then
+                  KV_ID="$FOUND"
+                  echo "Recovered KV namespace: title=${TITLE}, id=${KV_ID}"
+                  break
+                fi
+              done
+            else
+              # Extract id from create output: try JSON first, then 32-char hex fallback
+              KV_ID=$(echo "$KV_OUTPUT" | jq -r '.id' 2>/dev/null || echo "")
+              if [ -z "$KV_ID" ] || [ "$KV_ID" = "null" ]; then
+                KV_ID=$(echo "$KV_OUTPUT" | grep -oE '[0-9a-f]{32}' | head -1 || echo "")
+              fi
             fi
           fi
 
