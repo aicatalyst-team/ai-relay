@@ -62,6 +62,7 @@ export default function AdminPage() {
     handleTestCustomProvider,
     handleFetchProviderModels,
     handleSaveCustomProvider,
+    handleImportProviderLink,
     handleDeleteCustomProvider,
   } = useAdminHandlers(apiKey, t);
 
@@ -609,6 +610,7 @@ export default function AdminPage() {
             onSaveCustomProvider={handleSaveCustomProvider}
             onTestCustomProvider={handleTestCustomProvider}
             onFetchProviderModels={handleFetchProviderModels}
+            onImportProviderLink={handleImportProviderLink}
             onDeleteCustomProvider={handleDeleteCustomProvider}
           />
         )}

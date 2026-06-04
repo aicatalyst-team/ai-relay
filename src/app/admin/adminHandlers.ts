@@ -7,6 +7,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { AdminData } from './types';
+import { buildImportedProviderConfig, parseProviderImportLink } from './provider-import';
 
 interface ProviderFallbacks {
   current: string[];
@@ -485,6 +486,90 @@ export function useAdminHandlers(apiKey: string, t: any) {
     }
   }, [apiKey, t, fetchData]);
 
+  const handleImportProviderLink = useCallback(async (link: string) => {
+    setOperationLoading(true);
+    setConfigMessage(null);
+
+    try {
+      const payload = parseProviderImportLink(link);
+      const providers = data?.providers || [];
+      const baseProviderConfig = buildImportedProviderConfig({ payload, providers });
+      let discoveredModels: any[] = [];
+      let discoverWarning = '';
+
+      try {
+        const modelsRes = await fetch('/api/admin/providers/models', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${apiKey}`,
+          },
+          body: JSON.stringify({
+            key: payload.apiKey,
+            providerConfig: baseProviderConfig,
+          }),
+        });
+        const modelsData = await modelsRes.json();
+        if (modelsRes.ok && Array.isArray(modelsData.models)) {
+          discoveredModels = modelsData.models;
+        } else {
+          discoverWarning = modelsData.error?.message || 'Failed to fetch provider models';
+        }
+      } catch (err) {
+        discoverWarning = err instanceof Error ? err.message : 'Failed to fetch provider models';
+      }
+
+      const providerConfig = buildImportedProviderConfig({
+        payload,
+        providers,
+        models: discoveredModels,
+      });
+
+      const providerRes = await fetch('/api/admin/providers', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify(providerConfig),
+      });
+      const providerData = await providerRes.json();
+      if (!providerRes.ok) {
+        throw new Error(providerData.error?.message || 'Failed to save imported provider');
+      }
+
+      const keyRes = await fetch(`/api/admin/providers/${providerConfig.name}/keys`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({ key: payload.apiKey }),
+      });
+      const keyData = await keyRes.json();
+      if (!keyRes.ok) {
+        throw new Error(keyData.error?.message || 'Provider saved, but failed to save API key');
+      }
+
+      await fetchData(true);
+      setSelectedProvider(providerConfig.name);
+      await fetchProviderConfig(providerConfig.name);
+
+      const successTemplate = tRef.current.msgProviderImported || 'Provider imported: {provider}. Models: {count}.';
+      const warningTemplate = tRef.current.msgProviderImportedWithoutModels || 'Provider imported: {provider}. Model discovery failed; default prefixes were used.';
+      const text = discoverWarning
+        ? warningTemplate.replace('{provider}', providerConfig.displayName).replace('{reason}', discoverWarning)
+        : successTemplate.replace('{provider}', providerConfig.displayName).replace('{count}', String(discoveredModels.length));
+      setConfigMessage({ text, type: 'success' });
+    } catch (e) {
+      const messageKey = e instanceof Error ? e.message : 'import-provider-failed';
+      const mapped = tRef.current.providerImportErrors?.[messageKey] || (e instanceof Error ? e.message : tRef.current.alertSaveProviderFailed);
+      setConfigMessage({ text: mapped, type: 'error' });
+    } finally {
+      setOperationLoading(false);
+    }
+  }, [apiKey, data?.providers, fetchData, fetchProviderConfig]);
+
   const handleDeleteCustomProvider = useCallback(async (name: string) => {
     if (!confirm(t.deleteCustomProviderConfirm)) return;
     setOperationLoading(true);
@@ -546,6 +631,7 @@ export function useAdminHandlers(apiKey: string, t: any) {
     handleTestCustomProvider,
     handleFetchProviderModels,
     handleSaveCustomProvider,
+    handleImportProviderLink,
     handleDeleteCustomProvider,
   };
 }

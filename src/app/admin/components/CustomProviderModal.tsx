@@ -11,6 +11,7 @@ import {
   validateDraftProvider,
   type ProviderTemplate,
 } from './provider-templates';
+import { deriveModelPrefixesFromModels } from '../provider-import';
 
 interface CustomProviderModalProps {
   data: AdminData;
@@ -234,6 +235,14 @@ export default function CustomProviderModal({
       const result = await onFetchProviderModels(draftProvider, keyToUse);
       const models = Array.isArray(result?.models) ? result.models : [];
       setFetchedProviderModels(models);
+
+      if (models.length > 0) {
+        const derived = deriveModelPrefixesFromModels(models);
+        if (derived.length > 0) {
+          setFormModelPrefixes(derived.join(', '));
+        }
+      }
+
       setModelFetchState({
         status: 'success',
         message: lang === 'zh' ? `已拉取 ${models.length} 个模型` : `Fetched ${models.length} models`,
@@ -617,9 +626,31 @@ export default function CustomProviderModal({
             </div>
 
             <div>
-              <label style={{ display: 'block', fontSize: '0.85rem', color: '#9ca3af', marginBottom: '0.3rem' }}>
-                {t.modelPrefixes}
-              </label>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.3rem' }}>
+                <label style={{ display: 'block', fontSize: '0.85rem', color: '#9ca3af', margin: 0 }}>
+                  {t.modelPrefixes}
+                </label>
+                {formModels.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const derived = deriveModelPrefixesFromModels(formModels);
+                      setFormModelPrefixes(derived.join(', '));
+                    }}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: '#60a5fa',
+                      fontSize: '0.74rem',
+                      cursor: 'pointer',
+                      padding: 0,
+                      fontWeight: 500,
+                    }}
+                  >
+                    {t.deriveFromModels || 'Auto-derive'}
+                  </button>
+                )}
+              </div>
               <input
                 type="text"
                 placeholder="e.g. gpt-, claude-"
