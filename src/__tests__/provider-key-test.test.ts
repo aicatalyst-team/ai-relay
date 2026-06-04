@@ -59,13 +59,21 @@ describe('admin provider key test', () => {
       headers: expect.objectContaining({ 'User-Agent': 'openai-python/2.40.0' }),
     }));
     expect(fetchMock).toHaveBeenNthCalledWith(2, 'https://example.com/v1/chat/completions', expect.objectContaining({
-      headers: expect.objectContaining({ 'User-Agent': 'Mozilla/5.0' }),
+      headers: expect.objectContaining({ 'User-Agent': expect.stringContaining('Chrome/148') }),
     }));
   });
 
   it('retries /v1/chat/completions when a bare provider base URL returns an HTML page', async () => {
     const fetchMock = vi
       .fn()
+      .mockResolvedValueOnce(new Response('<!doctype html><title>New API</title>', {
+        status: 200,
+        headers: { 'Content-Type': 'text/html; charset=utf-8' },
+      }))
+      .mockResolvedValueOnce(new Response('<!doctype html><title>New API</title>', {
+        status: 200,
+        headers: { 'Content-Type': 'text/html; charset=utf-8' },
+      }))
       .mockResolvedValueOnce(new Response('<!doctype html><title>New API</title>', {
         status: 200,
         headers: { 'Content-Type': 'text/html; charset=utf-8' },
@@ -86,7 +94,7 @@ describe('admin provider key test', () => {
 
     expect(await res.json()).toEqual({ valid: true });
     expect(fetchMock).toHaveBeenNthCalledWith(1, 'https://example.com/chat/completions', expect.anything());
-    expect(fetchMock).toHaveBeenNthCalledWith(2, 'https://example.com/v1/chat/completions', expect.anything());
+    expect(fetchMock).toHaveBeenNthCalledWith(4, 'https://example.com/v1/chat/completions', expect.anything());
   });
 
   it('summarizes upstream HTML failures instead of returning the full HTML page', async () => {

@@ -37,6 +37,56 @@ async function getErrorStorage() {
 
 type RelayApiType = 'chat' | 'responses' | 'anthropicMessages';
 type RelayRequestBody = ChatCompletionRequest | ResponsesAPIRequest | AnthropicMessagesRequest;
+const BROWSER_COMPAT_USER_AGENTS = [
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36',
+  'Mozilla/5.0',
+];
+
+function getUserAgentCandidates(provider: ProviderConfig): Array<string | undefined> {
+  const candidates: Array<string | undefined> = [
+    provider.userAgent?.trim() || undefined,
+    undefined,
+    ...BROWSER_COMPAT_USER_AGENTS,
+  ];
+  const seen = new Set<string>();
+  return candidates.filter((candidate) => {
+    const key = candidate || '__client_or_default_sdk__';
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function shouldRetryWithAlternateUserAgent(response: Response): boolean {
+  return (response.headers.get('content-type') || '').includes('text/html');
+}
+
+async function fetchUpstreamWithUserAgentCandidates(input: {
+  provider: ProviderConfig;
+  apiKey: string;
+  isStream: boolean;
+  clientUserAgent?: string;
+  url: string;
+  body: unknown;
+}): Promise<Response> {
+  const payload = JSON.stringify(input.body);
+  let lastResponse: Response | null = null;
+
+  for (const customUserAgent of getUserAgentCandidates(input.provider)) {
+    const response = await fetch(input.url, {
+      method: 'POST',
+      headers: buildHeaders(input.provider.headerFormat, input.apiKey, input.isStream, input.clientUserAgent, customUserAgent),
+      body: payload,
+    });
+
+    lastResponse = response;
+    if (!shouldRetryWithAlternateUserAgent(response)) {
+      return response;
+    }
+  }
+
+  return lastResponse!;
+}
 
 /**
  * Record an upstream error to KV for admin dashboard tracking.
@@ -295,10 +345,13 @@ async function tryProviderWithRetries(
       break;
     }
     try {
-      const upstreamResponse = await fetch(url, {
-        method: 'POST',
-        headers: buildHeaders(provider.headerFormat, currentKey.key, !!body.stream, userAgent, provider.userAgent),
-        body: JSON.stringify(requestBody),
+      const upstreamResponse = await fetchUpstreamWithUserAgentCandidates({
+        provider,
+        apiKey: currentKey.key,
+        isStream: !!body.stream,
+        clientUserAgent: userAgent,
+        url,
+        body: requestBody,
       });
 
       const latencyMs = Date.now() - startTime;

@@ -519,6 +519,11 @@ export function useAdminHandlers(apiKey: string, t: any) {
         if (typeof modelsData.baseUrl === 'string' && modelsData.baseUrl) {
           payload.baseUrl = modelsData.baseUrl;
         }
+        if (Object.prototype.hasOwnProperty.call(modelsData, 'userAgent')) {
+          payload.userAgent = typeof modelsData.userAgent === 'string' && modelsData.userAgent.trim()
+            ? modelsData.userAgent.trim()
+            : null;
+        }
       } catch (err) {
         throw new Error(err instanceof Error ? err.message : 'Failed to fetch provider models');
       }

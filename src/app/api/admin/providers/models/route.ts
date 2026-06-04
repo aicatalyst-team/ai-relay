@@ -12,6 +12,10 @@ import type { ModelInfo, ProviderConfig } from '@/lib/providers/types';
 
 export const runtime = 'nodejs';
 export const maxDuration = 15;
+const BROWSER_COMPAT_USER_AGENTS = [
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36',
+  'Mozilla/5.0',
+];
 
 type DiscoverModelsBody = {
   provider?: string;
@@ -129,6 +133,57 @@ async function readUpstreamError(response: Response): Promise<string> {
   }
 }
 
+function isHtmlResponse(response: Response): boolean {
+  return (response.headers.get('content-type') || '').includes('text/html');
+}
+
+function getUserAgentCandidates(provider: ProviderConfig): Array<string | undefined> {
+  const candidates: Array<string | undefined> = [
+    provider.userAgent?.trim() || undefined,
+    undefined,
+    ...BROWSER_COMPAT_USER_AGENTS,
+  ];
+  const seen = new Set<string>();
+  return candidates.filter((candidate) => {
+    const key = candidate || '__default_sdk__';
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+async function retryHtmlResponseWithUserAgentCandidates(
+  response: Response,
+  url: string,
+  provider: ProviderConfig,
+  apiKey: string,
+  signal: AbortSignal
+): Promise<{ response: Response; userAgent: string | null }> {
+  let selectedUserAgent = provider.userAgent?.trim() || null;
+  if (!isHtmlResponse(response)) return { response, userAgent: selectedUserAgent };
+
+  for (const userAgent of getUserAgentCandidates(provider).slice(1)) {
+    try {
+      const retryResponse = await fetch(url, {
+        method: 'GET',
+        headers: buildHeaders(provider.headerFormat, apiKey, false, undefined, userAgent),
+        signal,
+      });
+      if (retryResponse.ok && !isHtmlResponse(retryResponse)) {
+        return { response: retryResponse, userAgent: userAgent || null };
+      }
+      if (!isHtmlResponse(retryResponse)) {
+        response = retryResponse;
+        selectedUserAgent = userAgent || null;
+      }
+    } catch {
+      // Keep trying the remaining UA candidates.
+    }
+  }
+
+  return { response, userAgent: selectedUserAgent };
+}
+
 export async function POST(request: NextRequest) {
   const authErr = requireAdminAuth(request);
   if (authErr) return authErr;
@@ -162,6 +217,7 @@ export async function POST(request: NextRequest) {
   }
 
   let response: Response;
+  let discoveredUserAgent: string | null = provider.userAgent?.trim() || null;
   let finalBaseUrl = provider.baseUrl;
   const initialUrl = getModelsUrl(provider);
 
@@ -240,6 +296,11 @@ export async function POST(request: NextRequest) {
     }
   }
 
+  const currentModelsUrl = finalBaseUrl === provider.baseUrl ? initialUrl : `${finalBaseUrl}/models`;
+  const retryResult = await retryHtmlResponseWithUserAgentCandidates(response, currentModelsUrl, provider, apiKey, controller.signal);
+  response = retryResult.response;
+  discoveredUserAgent = retryResult.userAgent;
+
   clearTimeout(timeoutId);
 
   if (!response.ok) {
@@ -267,5 +328,6 @@ export async function POST(request: NextRequest) {
     count: models.length,
     upstream: finalBaseUrl === provider.baseUrl ? initialUrl : `${finalBaseUrl}/models`,
     baseUrl: finalBaseUrl !== provider.baseUrl ? finalBaseUrl : undefined,
+    userAgent: discoveredUserAgent,
   });
 }

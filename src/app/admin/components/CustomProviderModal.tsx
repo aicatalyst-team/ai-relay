@@ -23,7 +23,7 @@ interface CustomProviderModalProps {
   setEditingCustomProvider: (val: any) => void;
   onSaveCustomProvider: (provider: any) => Promise<void>;
   onTestCustomProvider?: (provider: any, apiKeyValue: string, modelId?: string) => Promise<any>;
-  onFetchProviderModels?: (provider: any, apiKeyValue: string) => Promise<{ models: any[] }>;
+  onFetchProviderModels?: (provider: any, apiKeyValue: string) => Promise<{ models: any[]; userAgent?: string | null }>;
   providerKeys?: Array<{ hash: string; masked: string; source: string }> | null;
 }
 
@@ -250,6 +250,9 @@ export default function CustomProviderModal({
       const result = await onFetchProviderModels(draftProvider, keyToUse);
       const models = Array.isArray(result?.models) ? result.models : [];
       setFetchedProviderModels(models);
+      if (Object.prototype.hasOwnProperty.call(result || {}, 'userAgent')) {
+        setFormUserAgent(typeof result.userAgent === 'string' && result.userAgent.trim() ? result.userAgent.trim() : '');
+      }
 
       if (models.length > 0) {
         const derived = deriveModelPrefixesFromModels(models);

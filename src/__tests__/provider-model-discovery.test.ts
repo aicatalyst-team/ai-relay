@@ -145,6 +145,47 @@ describe('admin provider upstream model discovery', () => {
     expect(json.error.message).not.toContain('<!doctype html>');
   });
 
+  it('retries HTML challenge responses with the alternate User-Agent', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(new Response('<!doctype html><title>Just a moment...</title>', {
+        status: 403,
+        headers: { 'Content-Type': 'text/html; charset=utf-8' },
+      }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        object: 'list',
+        data: [{ id: 'gpt-5.4-mini', object: 'model' }],
+      }), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { POST } = await import('../app/api/admin/providers/models/route');
+    const res = await POST(req({
+      providerConfig: {
+        name: 'newapi_challenge',
+        displayName: 'NewAPI Challenge',
+        baseUrl: 'https://example.com/v1',
+        headerFormat: 'openai',
+        modelPrefixes: ['gpt-'],
+        envKeyField: 'NEWAPI_CHALLENGE_KEYS',
+        userAgent: 'Mozilla/5.0',
+      },
+      key: 'sk-test-key',
+    }));
+
+    expect(fetchMock).toHaveBeenNthCalledWith(1, 'https://example.com/v1/models', expect.objectContaining({
+      headers: expect.objectContaining({ 'User-Agent': 'Mozilla/5.0' }),
+    }));
+    expect(fetchMock).toHaveBeenNthCalledWith(2, 'https://example.com/v1/models', expect.objectContaining({
+      headers: expect.objectContaining({ 'User-Agent': 'openai-python/2.40.0' }),
+    }));
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect(json.userAgent).toBeNull();
+    expect(json.models).toEqual([
+      expect.objectContaining({ id: 'gpt-5.4-mini' }),
+    ]);
+  });
+
   it('resolves key from hash: prefix in body.key', async () => {
     const fetchMock = vi.fn(async () => new Response(JSON.stringify({
       object: 'list',

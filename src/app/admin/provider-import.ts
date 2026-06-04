@@ -6,6 +6,7 @@ export interface ProviderImportPayload {
   id: string;
   baseUrl: string;
   apiKey: string;
+  userAgent?: string | null;
 }
 
 export interface ProviderIdentity {
@@ -29,7 +30,7 @@ export const DEFAULT_NEWAPI_MODEL_PREFIXES = [
   'text-embedding-',
 ];
 
-export const DEFAULT_NEWAPI_IMPORT_USER_AGENT = 'Mozilla/5.0';
+export const DEFAULT_NEWAPI_IMPORT_USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36';
 
 function decodeBase64Json(data: string): any {
   const normalized = data.replace(/-/g, '+').replace(/_/g, '/');
@@ -185,7 +186,7 @@ export function buildImportedProviderConfig(input: {
     headerFormat: 'openai',
     modelPrefixes: modelPrefixes.length > 0 ? modelPrefixes : DEFAULT_NEWAPI_MODEL_PREFIXES,
     envKeyField: buildEnvKeyField(name),
-    userAgent: DEFAULT_NEWAPI_IMPORT_USER_AGENT,
+    userAgent: input.payload.userAgent === null ? undefined : (input.payload.userAgent || DEFAULT_NEWAPI_IMPORT_USER_AGENT),
     models: input.models || [],
   };
 }

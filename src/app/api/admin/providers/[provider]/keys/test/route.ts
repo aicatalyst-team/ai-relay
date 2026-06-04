@@ -16,7 +16,10 @@ export const runtime = 'nodejs';
 export const maxDuration = 15; // Max 15s duration for API route
 
 type Params = Promise<{ provider: string }>;
-const BROWSER_COMPAT_USER_AGENT = 'Mozilla/5.0';
+const BROWSER_COMPAT_USER_AGENTS = [
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36',
+  'Mozilla/5.0',
+];
 
 function getFallbackOpenAIUrl(provider: ProviderConfig): string | null {
   if (provider.headerFormat !== 'openai') return null;
@@ -53,6 +56,21 @@ function shouldTryNext(response: Response, text: string): boolean {
   const contentType = response.headers.get('content-type') || '';
   const trimmed = text.trim();
   return contentType.includes('text/html') || /^<!doctype html/i.test(trimmed) || /^<html/i.test(trimmed);
+}
+
+function getUserAgentCandidates(provider: ProviderConfig): Array<string | undefined> {
+  const candidates: Array<string | undefined> = [
+    provider.userAgent?.trim() || undefined,
+    undefined,
+    ...BROWSER_COMPAT_USER_AGENTS,
+  ];
+  const seen = new Set<string>();
+  return candidates.filter((candidate) => {
+    const key = candidate || '__default_sdk__';
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
 
 /**
@@ -133,7 +151,7 @@ export async function POST(request: NextRequest, { params }: { params: Params })
   const primaryUrl = getUpstreamUrl(provider);
   const fallbackUrl = getFallbackOpenAIUrl(provider);
   const urls = fallbackUrl && fallbackUrl !== primaryUrl ? [primaryUrl, fallbackUrl] : [primaryUrl];
-  const userAgents = provider.userAgent ? [provider.userAgent] : [undefined, BROWSER_COMPAT_USER_AGENT];
+  const userAgents = getUserAgentCandidates(provider);
   const isAnthropic = provider.headerFormat === 'anthropic';
 
   // Use appropriate default model based on provider format

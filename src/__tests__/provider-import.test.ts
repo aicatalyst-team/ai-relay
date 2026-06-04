@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   buildImportedProviderConfig,
+  DEFAULT_NEWAPI_IMPORT_USER_AGENT,
   deriveModelPrefixesFromModels,
   normalizeProviderId,
   normalizeImportedBaseUrl,
@@ -83,7 +84,7 @@ describe('NewAPI provider import links', () => {
       baseUrl: 'https://relay.example.com/v1',
       headerFormat: 'openai',
       envKeyField: 'EXAMPLE_COM_KEYS',
-      userAgent: 'Mozilla/5.0',
+      userAgent: DEFAULT_NEWAPI_IMPORT_USER_AGENT,
       modelPrefixes: ['gpt-4o-mini'],
     });
   });
@@ -104,7 +105,7 @@ describe('NewAPI provider import links', () => {
     expect(buildImportedProviderConfig({ payload, providers: [] })).toMatchObject({
       baseUrl: 'https://elysiver.h-e.top/v1',
       name: 'elysiver_h_e_top',
-      userAgent: 'Mozilla/5.0',
+      userAgent: DEFAULT_NEWAPI_IMPORT_USER_AGENT,
     });
   });
 });
