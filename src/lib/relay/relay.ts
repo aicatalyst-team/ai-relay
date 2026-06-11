@@ -257,18 +257,19 @@ export async function relayRequest(
   let primaryResult: { result: RelayResult | null; lastError: Error | null } = { result: null, lastError: null };
 
   // Fetch fallback chain early to determine if we can fall back on rate limit/circuit breaker open
-  const { getFallbackChain } = await import('../admin/admin-config');
-  const fallbackNames = await getFallbackChain(
-    effectiveProvider.name,
-    effectiveProvider.fallbackProviders || effectiveProvider.fallbackProvider
-  );
+  const { getDefaultConfigStore } = await import('../config-store');
+  const store = getDefaultConfigStore();
+  const fallbackNames = await store.getFallbackChain(effectiveProvider.name);
+  const effectiveFallbackNames = fallbackNames.length > 0
+    ? fallbackNames
+    : (effectiveProvider.fallbackProviders || (effectiveProvider.fallbackProvider ? [effectiveProvider.fallbackProvider] : []));
 
   // Pre-flight: check rate limiter (token bucket + circuit breaker)
   const rateLimitCheck = checkRateLimit(effectiveProvider.name);
 
   if (!rateLimitCheck.allowed) {
     // If no fallbacks are configured, fail immediately with 429
-    if (fallbackNames.length === 0) {
+    if (effectiveFallbackNames.length === 0) {
       throw new RelayError(
         rateLimitCheck.reason || 'Rate limit exceeded',
         'rate_limit_error',
@@ -302,7 +303,7 @@ export async function relayRequest(
 
   const attemptedProviders = new Set<string>([effectiveProvider.name]);
 
-  for (const fbEntry of fallbackNames) {
+  for (const fbEntry of effectiveFallbackNames) {
     // Parse "provider:model" format — model is optional
     const colonIdx = fbEntry.indexOf(':');
     const fbName = colonIdx >= 0 ? fbEntry.slice(0, colonIdx) : fbEntry;
