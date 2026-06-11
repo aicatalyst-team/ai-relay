@@ -1,0 +1,22 @@
+// ============================================================
+// AI Relay API — Local Config Version
+// ============================================================
+
+import { NextRequest } from 'next/server';
+
+export const runtime = 'nodejs';
+
+export async function GET(request: NextRequest) {
+  try {
+    const { getDefaultConfigStore } = await import('@/lib/config-store');
+    const store = getDefaultConfigStore();
+    const version = await store.getConfigVersion();
+
+    return Response.json({ version });
+  } catch (error: any) {
+    return Response.json(
+      { error: { message: error.message, type: 'internal_error' } },
+      { status: 500 }
+    );
+  }
+}
