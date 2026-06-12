@@ -1,0 +1,51 @@
+// ============================================================
+// AI Relay API — Usage Batch Upload
+// ============================================================
+
+import { NextRequest } from 'next/server';
+import { kv } from '@vercel/kv';
+
+export const runtime = 'nodejs';
+
+// POST /api/local/usage/batch - Receive usage from local relay
+export async function POST(request: NextRequest) {
+  const authHeader = request.headers.get('authorization');
+  const token = authHeader?.replace('Bearer ', '');
+
+  if (!token) {
+    return Response.json({ error: 'Missing token' }, { status: 401 });
+  }
+
+  // Verify device token
+  const devices = await kv.keys('device:*');
+  let deviceId: string | null = null;
+
+  for (const key of devices) {
+    const device = await kv.hgetall(key);
+    if (device && device.token_hash === hashToken(token)) {
+      deviceId = key.replace('device:', '');
+      break;
+    }
+  }
+
+  if (!deviceId) {
+    return Response.json({ error: 'Invalid token' }, { status: 401 });
+  }
+
+  const { events } = await request.json();
+
+  // Store usage events (simplified - just log for MVP)
+  console.log(`[Usage] Device ${deviceId} uploaded ${events?.length || 0} events`);
+
+  // Update last heartbeat
+  await kv.hset(`device:${deviceId}`, {
+    last_heartbeat: Date.now(),
+    status: 'online',
+  });
+
+  return Response.json({ success: true, received: events?.length || 0 });
+}
+
+function hashToken(token: string): string {
+  return `hash_${token.slice(0, 8)}`;
+}

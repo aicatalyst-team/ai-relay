@@ -29,6 +29,12 @@ export class CodexAdapter implements AgentAdapter {
       };
     }
 
+    // Backup
+    const backupPath = `${configPath}.backup.${Date.now()}`;
+    if (!options.dryRun) {
+      fs.copyFileSync(configPath, backupPath);
+    }
+
     const snippet = `
 [model_providers.ai-relay-local]
 name = "AI Relay Local"
@@ -45,30 +51,88 @@ requires_openai_auth = true
       };
     }
 
+    // Check if already installed
+    const content = fs.readFileSync(configPath, 'utf-8');
+    if (content.includes('[model_providers.ai-relay-local]')) {
+      return {
+        success: false,
+        message: 'ai-relay-local provider already exists in config',
+      };
+    }
+
     fs.appendFileSync(configPath, snippet);
 
     return {
       success: true,
       configPath,
-      message: `Added ai-relay-local provider to ${configPath}`,
+      message: `✅ Added ai-relay-local provider\n   Backup: ${backupPath}`,
     };
   }
 
   async doctor(): Promise<DoctorResult> {
     const detection = await this.detect();
+
+    const checks = [
+      {
+        name: 'Codex installed',
+        status: detection.installed ? 'pass' : 'fail',
+        message: detection.installed ? 'Found config at ~/.codex/config.toml' : 'Codex config not found',
+      },
+    ];
+
+    if (detection.installed && detection.configPath) {
+      const content = fs.readFileSync(detection.configPath, 'utf-8');
+      const hasProvider = content.includes('[model_providers.ai-relay-local]');
+
+      checks.push({
+        name: 'AI Relay provider configured',
+        status: hasProvider ? 'pass' : 'warn',
+        message: hasProvider ? 'ai-relay-local provider found in config' : 'Run "ai-relay agent install codex" first',
+      });
+
+      if (hasProvider) {
+        const hasBaseUrl = content.includes('base_url = "http://127.0.0.1:3147/v1"');
+        checks.push({
+          name: 'Base URL points to local relay',
+          status: hasBaseUrl ? 'pass' : 'warn',
+          message: hasBaseUrl ? 'Correctly points to 127.0.0.1:3147' : 'Base URL may be incorrect',
+        });
+      }
+    }
+
     return {
-      ok: detection.installed,
-      checks: [
-        {
-          name: 'Codex installed',
-          status: detection.installed ? 'pass' : 'fail',
-          message: detection.installed ? 'Found config at ~/.codex/config.toml' : 'Codex config not found',
-        },
-      ],
+      ok: checks.every(c => c.status === 'pass'),
+      checks,
     };
   }
 
   async uninstall(): Promise<void> {
-    // TODO: Remove ai-relay-local provider from config
+    const configPath = path.join(os.homedir(), '.codex', 'config.toml');
+
+    if (!fs.existsSync(configPath)) {
+      throw new Error('Codex config not found');
+    }
+
+    const content = fs.readFileSync(configPath, 'utf-8');
+
+    // Remove ai-relay-local section
+    const lines = content.split('\n');
+    const filtered = [];
+    let inSection = false;
+
+    for (const line of lines) {
+      if (line.trim() === '[model_providers.ai-relay-local]') {
+        inSection = true;
+        continue;
+      }
+      if (inSection && line.trim().startsWith('[')) {
+        inSection = false;
+      }
+      if (!inSection) {
+        filtered.push(line);
+      }
+    }
+
+    fs.writeFileSync(configPath, filtered.join('\n'));
   }
 }
