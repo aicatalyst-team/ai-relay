@@ -506,10 +506,10 @@ export default function AdminPage() {
           {t.tabKeys}
         </button>
         <button
-          className={`tab-btn ${activeTab === 'models' ? 'active' : ''}`}
-          onClick={() => setActiveTab('models')}
+          className={`tab-btn ${activeTab === 'routingPolicy' ? 'active' : ''}`}
+          onClick={() => setActiveTab('routingPolicy')}
         >
-          模型配置
+          🧭 {lang === 'zh' ? '路由策略' : 'Routing Policy'}
         </button>
         <button
           className={`tab-btn ${activeTab === 'health' ? 'active' : ''}`}
@@ -518,10 +518,10 @@ export default function AdminPage() {
           {t.tabHealth}
         </button>
         <button
-          className={`tab-btn ${activeTab === 'routingPolicy' ? 'active' : ''}`}
-          onClick={() => setActiveTab('routingPolicy')}
+          className={`tab-btn ${activeTab === 'usage' ? 'active' : ''}`}
+          onClick={() => setActiveTab('usage')}
         >
-          🧭 {lang === 'zh' ? '路由策略' : 'Routing Policy'}
+          {lang === 'zh' ? '📈 用量报告' : '📈 Usage Report'}
         </button>
         <button
           className={`tab-btn ${activeTab === 'security' ? 'active' : ''}`}
@@ -530,10 +530,10 @@ export default function AdminPage() {
           {lang === 'zh' ? '🛡️ Key安全' : '🛡️ Key Security'}
         </button>
         <button
-          className={`tab-btn ${activeTab === 'usage' ? 'active' : ''}`}
-          onClick={() => setActiveTab('usage')}
+          className={`tab-btn ${activeTab === 'models' ? 'active' : ''}`}
+          onClick={() => setActiveTab('models')}
         >
-          {lang === 'zh' ? '📈 用量报告' : '📈 Usage Report'}
+          模型配置
         </button>
         <button
           className={`tab-btn ${activeTab === 'logs' ? 'active' : ''}`}
