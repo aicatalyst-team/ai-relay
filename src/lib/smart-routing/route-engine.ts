@@ -245,12 +245,12 @@ export async function smartRoute(
     const poolStats = getKeyPoolStats() as Record<string, { total: number; available: number }>;
 
     const lowerModel = requestedModel.toLowerCase();
-    for (const [name, p] of Object.entries(allProviders)) {
+    const healthPromises = Object.entries(allProviders).map(async ([name, p]) => {
       // Only consider providers that can actually serve the requested model.
       // The originally-resolved provider is always included so the request has
       // a valid home even if matching is stricter than resolveProvider's.
       if (name !== requestedProvider && !providerSupportsModel(p, lowerModel)) {
-        continue;
+        return null;
       }
       const health = await getProviderHealth(name, p.displayName);
       const stats = poolStats[name];
@@ -258,6 +258,13 @@ export async function smartRoute(
         health.availableKeys = stats.available;
         health.totalKeys = stats.total;
       }
+      return [name, health] as const;
+    });
+
+    const healthEntries = (await Promise.all(healthPromises)).filter(
+      (entry): entry is readonly [string, ProviderHealthInfo] => entry !== null
+    );
+    for (const [name, health] of healthEntries) {
       providerHealthMap.set(name, health);
     }
   }

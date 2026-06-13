@@ -249,4 +249,29 @@ describe('relayRequest fallback sourcing', () => {
     expect(prioritySpy).toHaveBeenCalled();
     expect(staticFallbackSpy).toHaveBeenCalled();
   });
+
+  it('smart routing failure: falls back to traditional failover chain when smartRoute throws', async () => {
+    await mockAllProvidersFailing();
+
+    const smartRouting = await import('../lib/smart-routing');
+    vi.spyOn(smartRouting, 'isSmartRoutingConfigured').mockResolvedValue(true);
+    // Simulate smartRoute failing (e.g. KV timeout)
+    vi.spyOn(smartRouting, 'smartRoute').mockRejectedValue(new Error('KV connection error'));
+
+    vi.spyOn(resolver, 'resolveProvider').mockResolvedValue(
+      provider({ name: 'hundredx', displayName: '100xLabs', modelPrefixes: ['claude-'], headerFormat: 'anthropic', baseUrl: 'https://100x.example.com/v1', fallbackProviders: ['muyuan'] }) as any,
+    );
+
+    const adminConfig = await import('../lib/admin/admin-config');
+    const staticFallbackSpy = vi.spyOn(adminConfig, 'getFallbackChain').mockResolvedValue(['muyuan']);
+
+    try {
+      await relayRequest({ model: 'claude-sonnet-4-6', messages: [{ role: 'user', content: 'hi' }] } as any, 'anthropicMessages');
+    } catch {
+      // expected
+    }
+
+    // Since smartRoute failed, it should fall back to traditional failover and fetch the fallback chain.
+    expect(staticFallbackSpy).toHaveBeenCalledWith('hundredx', ['muyuan']);
+  });
 });

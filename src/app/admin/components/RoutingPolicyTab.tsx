@@ -47,7 +47,7 @@ export default function RoutingPolicyTab(props: RoutingPolicyTabProps) {
   const [modeMessage, setModeMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
 
   // Fallback chain editor (traditional mode only)
-  const fallbackPolicy = useFallbackPolicy(apiKey, t, true);
+  const fallbackPolicy = useFallbackPolicy(apiKey, t, true, data?.providers || []);
 
   // Fetch current routing config to initialize mode (enabled → smart, !enabled → traditional)
   useEffect(() => {

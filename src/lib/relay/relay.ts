@@ -276,10 +276,17 @@ export async function relayRequest(
       fallbackNames = routingDecision.fallbackChain
         .filter((name) => allProviders[name] && name !== effectiveProvider.name);
       console.log(`[smart-route] Fallback chain: ${fallbackNames.join(' → ') || 'none'}`);
-    } catch {
-      // Smart routing is non-blocking; fall through to original provider with
-      // no fallback chain (traditional config is intentionally not consulted
-      // while smart routing is the active mode).
+    } catch (e) {
+      console.error('[smart-route] Failed, falling back to traditional failover:', e);
+      try {
+        const { getFallbackChain } = await import('../admin/admin-config');
+        fallbackNames = await getFallbackChain(
+          effectiveProvider.name,
+          effectiveProvider.fallbackProviders || effectiveProvider.fallbackProvider
+        );
+      } catch {
+        // Fallback fallback is best effort
+      }
     }
   } else {
     // Traditional mode: priority rule providerOrder first, then static fallback.
@@ -294,8 +301,11 @@ export async function relayRequest(
           ? priorityRule.providerOrder.slice(currentIndex + 1)
           : priorityRule.providerOrder.filter((name) => name !== effectiveProvider.name);
         if (remaining.length > 0) {
-          fallbackNames = remaining;
-          console.log(`[priority-fallback] Using providerOrder: ${fallbackNames.join(' → ')}`);
+          const allProviders = await getAllProviders();
+          fallbackNames = remaining.filter((name) => allProviders[name]);
+          if (fallbackNames.length > 0) {
+            console.log(`[priority-fallback] Using providerOrder: ${fallbackNames.join(' → ')}`);
+          }
         }
       }
     } catch {

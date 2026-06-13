@@ -148,7 +148,7 @@ export async function routeByStrategy(
       if (
         preferredHealth &&
         preferredHealth.status !== 'down' &&
-        preferredScore <= bestScore * tolerance
+        (bestScore <= 0 || preferredScore <= bestScore * tolerance)
       ) {
         const entry = scored.splice(preferredIdx, 1)[0];
         scored.unshift(entry);

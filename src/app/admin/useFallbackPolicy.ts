@@ -14,7 +14,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { ProviderFallbacks } from './types';
 
-export function useFallbackPolicy(apiKey: string, t: any, authenticated: boolean) {
+export function useFallbackPolicy(apiKey: string, t: any, authenticated: boolean, providers: any[] = []) {
   const [selectedProvider, setSelectedProvider] = useState<string | null>(null);
   const [providerFallbacks, setProviderFallbacks] = useState<ProviderFallbacks | null>(null);
   const [activeFallbacks, setActiveFallbacks] = useState<string[]>([]);
@@ -24,6 +24,22 @@ export function useFallbackPolicy(apiKey: string, t: any, authenticated: boolean
 
   const tRef = useRef(t);
   tRef.current = t;
+
+  // Automatically select a default value for the fallback-to-add dropdown when options change
+  useEffect(() => {
+    const usedProviders = activeFallbacks.map(fb => {
+      const colonIdx = fb.indexOf(':');
+      return colonIdx >= 0 ? fb.slice(0, colonIdx) : fb;
+    });
+    if (selectedProvider && providers.length > 0) {
+      const available = providers.filter(p => p.id !== selectedProvider && !usedProviders.includes(p.id));
+      if (available.length > 0 && !available.some(p => p.id === selectedFallbackToAdd)) {
+        setSelectedFallbackToAdd(available[0].id);
+      }
+    } else {
+      setSelectedFallbackToAdd('');
+    }
+  }, [selectedProvider, activeFallbacks, providers, selectedFallbackToAdd]);
 
   const fetchFallbacks = useCallback(async (providerId: string) => {
     setOperationLoading(true);

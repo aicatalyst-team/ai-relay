@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import type { AdminData, ProviderFallbacks } from '../types';
 import HelpIcon from './HelpIcon';
 
@@ -46,6 +46,13 @@ export default function FallbackChainEditor(props: FallbackChainEditorProps) {
     onSaveFallbacks,
     onResetFallbacks,
   } = props;
+
+  const isUnchanged = useMemo(() => {
+    if (!providerFallbacks) return true;
+    const current = providerFallbacks.current || [];
+    if (activeFallbacks.length !== current.length) return false;
+    return activeFallbacks.every((val, idx) => val === current[idx]);
+  }, [activeFallbacks, providerFallbacks]);
 
   return (
     <div className="glass-panel" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -401,7 +408,7 @@ export default function FallbackChainEditor(props: FallbackChainEditorProps) {
             )}
             <button
               onClick={() => onSaveFallbacks(activeFallbacks)}
-              disabled={operationLoading || JSON.stringify(activeFallbacks) === JSON.stringify(providerFallbacks.current)}
+              disabled={operationLoading || isUnchanged}
               style={{
                 padding: '0.5rem 1.25rem',
                 borderRadius: '6px',
