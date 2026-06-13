@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import HelpIcon from './HelpIcon';
 
 // ============================================================
 // Types (mirror smart-routing/types.ts for client-side)
@@ -432,58 +431,48 @@ export default function RoutingTab({ apiKey, lang }: RoutingTabProps) {
 
   return (
     <div>
-      {/* Master enable switch — smart routing is mutually exclusive with
-          priority rules + traditional fallback. */}
-      <MasterSwitch
-        enabled={config.enabled}
-        onToggle={(enabled) => saveConfig({ enabled })}
+      {/* Smart routing is active whenever this tab is shown — the routing-mode
+          selector (traditional vs. smart) above already persists config.enabled,
+          so there is no separate enable switch here. */}
+
+      {/* Status overlay bar */}
+      <StatusBar status={status} t={t} />
+
+      {/* Strategy Selector */}
+      <StrategySelector
+        current={config.strategy}
+        onSwitch={switchStrategy}
         saving={saving}
         t={t}
       />
 
-      {/* Everything below only applies while smart routing is enabled. */}
-      {config.enabled && (
-        <>
-          {/* Status overlay bar */}
-          <StatusBar status={status} t={t} />
+      {/* Two-column layout: Topology + Config */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)',
+        gap: '1.5rem',
+        marginTop: '1.5rem',
+      }} className="routing-grid">
+        {/* Provider Topology */}
+        <ProviderTopology
+          providers={status?.activeProviders || []}
+          onResetFailures={resetFailures}
+          t={t}
+        />
 
-          {/* Strategy Selector */}
-          <StrategySelector
-            current={config.strategy}
-            onSwitch={switchStrategy}
+        {/* Config Editor + Recent Switches */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          <ConfigEditor
+            config={config}
+            editConfig={editConfig}
+            setEditConfig={setEditConfig}
+            onSave={saveConfig}
             saving={saving}
             t={t}
           />
-
-          {/* Two-column layout: Topology + Config */}
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)',
-            gap: '1.5rem',
-            marginTop: '1.5rem',
-          }} className="routing-grid">
-            {/* Provider Topology */}
-            <ProviderTopology
-              providers={status?.activeProviders || []}
-              onResetFailures={resetFailures}
-              t={t}
-            />
-
-            {/* Config Editor + Recent Switches */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-              <ConfigEditor
-                config={config}
-                editConfig={editConfig}
-                setEditConfig={setEditConfig}
-                onSave={saveConfig}
-                saving={saving}
-                t={t}
-              />
-              <RecentSwitches switches={status?.recentSwitches || []} t={t} />
-            </div>
-          </div>
-        </>
-      )}
+          <RecentSwitches switches={status?.recentSwitches || []} t={t} />
+        </div>
+      </div>
 
       {/* Message */}
       {message && (
@@ -526,96 +515,6 @@ function btnStyle(bg: string): React.CSSProperties {
     fontWeight: 500,
     transition: 'all 0.2s',
   };
-}
-
-// ---- Toggle Switch ----
-
-function ToggleSwitch({ checked, onChange, disabled }: {
-  checked: boolean;
-  onChange: (checked: boolean) => void;
-  disabled?: boolean;
-}) {
-  return (
-    <button
-      onClick={() => !disabled && onChange(!checked)}
-      disabled={disabled}
-      style={{
-        width: '48px',
-        height: '26px',
-        borderRadius: '13px',
-        border: 'none',
-        cursor: disabled ? 'not-allowed' : 'pointer',
-        background: checked
-          ? 'linear-gradient(135deg, #3b82f6, #8b5cf6)'
-          : 'rgba(255, 255, 255, 0.1)',
-        position: 'relative',
-        transition: 'background 0.2s',
-        opacity: disabled ? 0.5 : 1,
-      }}
-    >
-      <div style={{
-        width: '20px',
-        height: '20px',
-        borderRadius: '50%',
-        background: '#fff',
-        position: 'absolute',
-        top: '3px',
-        left: checked ? '25px' : '3px',
-        transition: 'left 0.2s',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
-      }} />
-    </button>
-  );
-}
-
-// ---- Master Switch ----
-
-function MasterSwitch({ enabled, onToggle, saving, t }: {
-  enabled: boolean;
-  onToggle: (enabled: boolean) => void;
-  saving: boolean;
-  t: typeof T['zh'];
-}) {
-  return (
-    <div className="glass-panel" style={{ marginBottom: '1.5rem' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 600, color: '#e5e7eb' }}>
-            {t.smartRoutingMode}
-          </h3>
-          <HelpIcon tooltip={t.smartRoutingHelp} />
-        </div>
-
-        <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
-          <span style={{ fontSize: '0.85rem', color: enabled ? '#34d399' : '#6b7280' }}>
-            {enabled ? t.enabled : t.disabled}
-          </span>
-          <ToggleSwitch
-            checked={enabled}
-            onChange={onToggle}
-            disabled={saving}
-          />
-        </label>
-      </div>
-
-      {enabled && (
-        <div style={{
-          marginTop: '0.75rem',
-          padding: '0.75rem',
-          borderRadius: '8px',
-          background: 'rgba(251, 191, 36, 0.1)',
-          border: '1px solid rgba(251, 191, 36, 0.2)',
-          color: '#fbbf24',
-          fontSize: '0.85rem',
-          display: 'flex',
-          gap: '0.5rem',
-        }}>
-          <span>⚠️</span>
-          <span>{t.smartRoutingWarning}</span>
-        </div>
-      )}
-    </div>
-  );
 }
 
 // ---- Status Bar ----
