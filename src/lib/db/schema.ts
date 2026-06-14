@@ -116,4 +116,5 @@ export const requestLogs = pgTable('request_logs', {
   index('request_logs_timestamp_idx').on(table.timestamp),
   index('request_logs_status_idx').on(table.status),
   index('request_logs_provider_idx').on(table.provider),
+  index('request_logs_trace_id_idx').on(table.traceId),
 ]);

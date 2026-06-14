@@ -10,14 +10,23 @@ export interface LocalServer {
   stop(): Promise<void>;
 }
 
+export interface ConfigSnapshot {
+  providers: Record<string, any>;
+  keys: Record<string, string[]>;
+  modelAliases: Record<string, string>;
+  priorityRules: any[];
+}
+
 export async function startLocalServer(profile: LocalProfile): Promise<LocalServer> {
   let configVersion = 0;
-  let config: any = null;
+  let config: ConfigSnapshot | null = null;
 
   // Config sync loop
   const configSyncInterval = setInterval(async () => {
     try {
-      const versionRes = await fetch(`${profile.cloudUrl}/api/local/config/version`);
+      const versionRes = await fetch(`${profile.cloudUrl}/api/local/config/version`, {
+        headers: { Authorization: `Bearer ${profile.deviceToken}` },
+      });
       const { version } = await versionRes.json();
 
       if (version > configVersion) {
@@ -51,7 +60,9 @@ export async function startLocalServer(profile: LocalProfile): Promise<LocalServ
 
   // Initial config fetch
   try {
-    const versionRes = await fetch(`${profile.cloudUrl}/api/local/config/version`);
+    const versionRes = await fetch(`${profile.cloudUrl}/api/local/config/version`, {
+      headers: { Authorization: `Bearer ${profile.deviceToken}` },
+    });
     const { version } = await versionRes.json();
     const snapshotRes = await fetch(`${profile.cloudUrl}/api/local/config/snapshot`, {
       headers: { Authorization: `Bearer ${profile.deviceToken}` },

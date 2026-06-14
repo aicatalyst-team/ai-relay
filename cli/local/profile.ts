@@ -43,7 +43,7 @@ export async function saveProfile(profile: LocalProfile): Promise<void> {
     fs.mkdirSync(profileDir, { recursive: true });
   }
   const profilePath = getProfilePath();
-  fs.writeFileSync(profilePath, JSON.stringify(profile, null, 2), 'utf-8');
+  fs.writeFileSync(profilePath, JSON.stringify(profile, null, 2), { mode: 0o600 });
 }
 
 export function ensureDirectories(): void {
