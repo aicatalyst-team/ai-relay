@@ -23,7 +23,13 @@ export async function startCommand(options: StartCommandOptions = {}) {
 
   // Override profile settings with CLI options
   if (options.port) {
-    profile.listenPort = parseInt(options.port, 10);
+    const port = parseInt(options.port, 10);
+    if (isNaN(port) || port < 1 || port > 65535) {
+      console.error(`❌ Invalid port: ${options.port}`);
+      console.error('   Port must be a number between 1 and 65535');
+      process.exit(1);
+    }
+    profile.listenPort = port;
   }
   if (options.host) {
     profile.listenHost = options.host;

@@ -6,6 +6,7 @@
 // ============================================================
 
 import * as fs from 'fs/promises';
+import * as fsSync from 'fs';
 import * as path from 'path';
 import type { ConfigSnapshot, ModelAliasConfig } from '../../src/lib/config-store/types';
 import type { ProviderConfig } from '../../src/lib/providers/types';
@@ -27,6 +28,12 @@ export interface ConfigSource {
    * Used for auto-reloading when config is updated.
    */
   watch?(callback: () => void): void;
+
+  /**
+   * Optional: Clean up resources (timers, file watchers, etc).
+   * Called when the config source is no longer needed.
+   */
+  dispose?(): void;
 
   /**
    * Human-readable description of this config source.
@@ -114,6 +121,49 @@ export interface FileConfig {
 }
 
 /**
+ * Transform FileConfig to ConfigSnapshot.
+ * Shared utility for FileConfigSource and InlineConfigSource.
+ */
+export function fileConfigToSnapshot(fileConfig: Partial<FileConfig>): ConfigSnapshot {
+  // Extract provider keys from provider configs
+  const providerKeys: Record<string, string[]> = {};
+  const providers: Record<string, ProviderConfig> = {};
+
+  if (fileConfig.providers) {
+    for (const [id, config] of Object.entries(fileConfig.providers)) {
+      const { apiKeys, ...providerConfig } = config;
+
+      // Store keys separately
+      if (apiKeys && apiKeys.length > 0) {
+        providerKeys[id] = apiKeys;
+      }
+
+      // Store provider config (without keys)
+      providers[id] = {
+        name: config.name || id,
+        baseUrl: config.baseUrl || '',
+        ...providerConfig,
+      } as ProviderConfig;
+    }
+  }
+
+  const modelAliases: ModelAliasConfig = {
+    aliases: fileConfig.modelAliases?.aliases || {},
+    hidden: fileConfig.modelAliases?.hidden || [],
+  };
+
+  return {
+    version: fileConfig.version || 1,
+    generatedAt: new Date().toISOString(),
+    providers,
+    providerKeys,
+    modelAliases,
+    priorityRules: fileConfig.routing?.priorityRules || [],
+    fallbackChains: fileConfig.routing?.fallbackChains || {},
+  };
+}
+
+/**
  * Loads configuration from a local JSON file.
  *
  * Supports a simplified config format and transforms it into
@@ -128,52 +178,13 @@ export class FileConfigSource implements ConfigSource {
     try {
       const content = await fs.readFile(this.filePath, 'utf-8');
       const fileConfig: FileConfig = JSON.parse(content);
-      return this.transformToSnapshot(fileConfig);
+      return fileConfigToSnapshot(fileConfig);
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
         throw new Error(`Config file not found: ${this.filePath}`);
       }
       throw new Error(`Failed to load config from ${this.filePath}: ${(error as Error).message}`);
     }
-  }
-
-  private transformToSnapshot(fileConfig: FileConfig): ConfigSnapshot {
-    // Extract provider keys from provider configs
-    const providerKeys: Record<string, string[]> = {};
-    const providers: Record<string, ProviderConfig> = {};
-
-    if (fileConfig.providers) {
-      for (const [id, config] of Object.entries(fileConfig.providers)) {
-        const { apiKeys, ...providerConfig } = config;
-
-        // Store keys separately
-        if (apiKeys && apiKeys.length > 0) {
-          providerKeys[id] = apiKeys;
-        }
-
-        // Store provider config (without keys)
-        providers[id] = {
-          name: config.name || id,
-          baseUrl: config.baseUrl || '',
-          ...providerConfig,
-        } as ProviderConfig;
-      }
-    }
-
-    const modelAliases: ModelAliasConfig = {
-      aliases: fileConfig.modelAliases?.aliases || {},
-      hidden: fileConfig.modelAliases?.hidden || [],
-    };
-
-    return {
-      version: fileConfig.version || 1,
-      generatedAt: new Date().toISOString(),
-      providers,
-      providerKeys,
-      modelAliases,
-      priorityRules: fileConfig.routing?.priorityRules || [],
-      fallbackChains: fileConfig.routing?.fallbackChains || {},
-    };
   }
 
   watch(callback: () => void): void {
@@ -184,10 +195,23 @@ export class FileConfigSource implements ConfigSource {
 
     // fs.watch can fire multiple times for a single change, debounce it
     let timeout: NodeJS.Timeout | undefined;
-    this.watcher = fs.watch(this.filePath, () => {
-      if (timeout) clearTimeout(timeout);
-      timeout = setTimeout(callback, 100);
-    });
+    try {
+      this.watcher = fsSync.watch(this.filePath, () => {
+        if (timeout) clearTimeout(timeout);
+        timeout = setTimeout(callback, 100);
+      });
+
+      // Handle watcher errors (e.g., file deleted)
+      this.watcher.on('error', (error) => {
+        console.error(`⚠️  Config file watcher error: ${error.message}`);
+        if (this.watcher) {
+          this.watcher.close();
+          this.watcher = undefined;
+        }
+      });
+    } catch (error) {
+      console.error(`⚠️  Failed to watch config file: ${(error as Error).message}`);
+    }
   }
 
   describe(): string {
@@ -215,9 +239,7 @@ export class InlineConfigSource implements ConfigSource {
   constructor(private readonly config: Partial<FileConfig>) {}
 
   async load(): Promise<ConfigSnapshot> {
-    // Use FileConfigSource's transform logic
-    const fileSource = new FileConfigSource('');
-    return (fileSource as any).transformToSnapshot(this.config);
+    return fileConfigToSnapshot(this.config);
   }
 
   describe(): string {
@@ -278,10 +300,11 @@ export class HybridConfigSource implements ConfigSource {
     };
 
     // Merge in reverse order (last to first) so first source wins
+    // Last config provides defaults, first config overrides
     for (let i = configs.length - 1; i >= 0; i--) {
       const config = configs[i];
 
-      // Merge providers
+      // Merge providers - later iterations (lower index = higher priority) override
       Object.assign(merged.providers, config.providers);
 
       // Merge provider keys

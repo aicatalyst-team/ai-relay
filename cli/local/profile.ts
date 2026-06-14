@@ -35,7 +35,14 @@ export async function loadProfile(): Promise<LocalProfile | null> {
     return null;
   }
   const data = fs.readFileSync(profilePath, 'utf-8');
-  return JSON.parse(data);
+  const profile = JSON.parse(data);
+
+  // Backward compatibility: add deviceName if missing
+  if (!profile.deviceName) {
+    profile.deviceName = os.hostname();
+  }
+
+  return profile;
 }
 
 export async function saveProfile(profile: LocalProfile): Promise<void> {

@@ -126,10 +126,8 @@ export async function startLocalServer(options: StartServerOptions): Promise<Loc
           if (configSyncInterval) clearInterval(configSyncInterval);
           if (heartbeatInterval) clearInterval(heartbeatInterval);
 
-          // Dispose config source if it supports disposal
-          if ('dispose' in configSource && typeof configSource.dispose === 'function') {
-            (configSource as any).dispose();
-          }
+          // Dispose config source
+          configSource.dispose?.();
 
           // Close HTTP server
           return new Promise((resolve) => server.close(() => resolve()));
