@@ -66,7 +66,7 @@ export async function login(cloudUrl: string, options: LoginOptions) {
 
       console.log(`✨ Login successful!`);
       console.log(`   Device ID: ${result.device_id}`);
-      console.log(`\n👉 Next: Run "ai-relay local start" to start the relay\n`);
+      console.log(`\n👉 Next: Run "airelay local:start" to start the relay\n`);
       return;
     }
 

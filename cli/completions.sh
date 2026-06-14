@@ -1,4 +1,4 @@
-#\!/bin/bash
+#!/bin/bash
 # airelay shell completion for bash/zsh
 
 _airelay_completions() {
