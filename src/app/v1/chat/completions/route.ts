@@ -11,6 +11,7 @@
 
 import { NextRequest } from 'next/server';
 import { validateAuth, relayRequest, validateBase64ImageSizes, validateRequestSize } from '@/lib/relay';
+import { collectPassthroughHeaders } from '@/lib/relay/passthrough';
 import { RelayError } from '@/lib/errors';
 import { createUsageEvent, getBatchRecorder } from '@/lib/usage';
 import { createUsageStorage } from '@/lib/usage/factory';
@@ -25,47 +26,6 @@ const batchRecorder = getBatchRecorder();
 
 /** Rough chars-per-token estimate for fallback */
 const CHARS_PER_TOKEN = 4;
-
-/**
- * Headers that should NOT be forwarded to upstream providers.
- * These are either set by our relay, sensitive, or conflict with upstream requirements.
- */
-const BLOCKED_PASSTHROUGH_HEADERS = new Set([
-  'authorization',
-  'x-api-key',
-  'api-key',
-  'host',
-  'content-length',
-  'connection',
-  'transfer-encoding',
-  'upgrade',
-  'proxy-authorization',
-  'te',
-  'trailer',
-]);
-
-/**
- * Collect client-supplied headers worth forwarding to upstream providers.
- * This includes SDK tracking headers, client identification, and provider-specific headers.
- */
-function collectPassthroughHeaders(request: NextRequest): Record<string, string> {
-  const out: Record<string, string> = {};
-
-  // Iterate through all request headers
-  request.headers.forEach((value, key) => {
-    const lowerKey = key.toLowerCase();
-
-    // Skip blocked headers
-    if (BLOCKED_PASSTHROUGH_HEADERS.has(lowerKey)) {
-      return;
-    }
-
-    // Forward all other headers
-    out[key] = value;
-  });
-
-  return out;
-}
 
 /**
  * Estimate token count from text (rough fallback).
@@ -361,7 +321,7 @@ export async function POST(request: NextRequest) {
   try {
     const startTime = Date.now();
     const userAgent = request.headers.get('user-agent') || undefined;
-    const passthroughHeaders = collectPassthroughHeaders(request);
+    const passthroughHeaders = collectPassthroughHeaders(request.headers);
     const { response, provider, apiKey } = await relayRequest(body, 'chat', userAgent, rawBody, passthroughHeaders);
     const latencyMs = Date.now() - startTime;
 

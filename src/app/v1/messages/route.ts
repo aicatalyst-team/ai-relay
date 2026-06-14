@@ -7,6 +7,7 @@
 import { NextRequest } from 'next/server';
 import { validateAuth, relayRequest } from '@/lib/relay';
 import { transformOpenAIToAnthropic } from '@/lib/relay/transform';
+import { collectPassthroughHeaders } from '@/lib/relay/passthrough';
 import { RelayError } from '@/lib/errors';
 import { createUsageEvent, getBatchRecorder } from '@/lib/usage';
 import { createUsageStorage } from '@/lib/usage/factory';
@@ -451,52 +452,6 @@ function wrapOpenAIStreamToAnthropic(
   });
 }
 
-/**
- * Headers that should NOT be forwarded to upstream providers.
- * These are either set by our relay, sensitive, or conflict with upstream requirements.
- */
-const BLOCKED_PASSTHROUGH_HEADERS = new Set([
-  'authorization',
-  'x-api-key',
-  'api-key',
-  'host',
-  'content-length',
-  'connection',
-  'transfer-encoding',
-  'upgrade',
-  'proxy-authorization',
-  'te',
-  'trailer',
-]);
-
-/**
- * Collect client-supplied headers worth forwarding to an Anthropic upstream.
- * This includes:
- * - Anthropic-specific headers (anthropic-beta, anthropic-version, anthropic-dangerous-direct-browser-access)
- * - Client identification headers (x-app, x-claude-code-session-id, x-stainless-*)
- * - Any other headers not in the blocked list
- *
- * Forwarding these keeps Claude CLI/App features working and helps upstream identify client context.
- */
-function collectAnthropicPassthroughHeaders(request: NextRequest): Record<string, string> {
-  const out: Record<string, string> = {};
-
-  // Iterate through all request headers
-  request.headers.forEach((value, key) => {
-    const lowerKey = key.toLowerCase();
-
-    // Skip blocked headers
-    if (BLOCKED_PASSTHROUGH_HEADERS.has(lowerKey)) {
-      return;
-    }
-
-    // Forward all other headers
-    out[key] = value;
-  });
-
-  return out;
-}
-
 function validateBody(body: Partial<AnthropicMessagesRequest>): string | null {
   if (!body.model || typeof body.model !== 'string') {
     return 'Missing required field: model.';
@@ -566,7 +521,7 @@ export async function POST(request: NextRequest) {
   try {
     const startTime = Date.now();
     const userAgent = request.headers.get('user-agent') || undefined;
-    const passthroughHeaders = collectAnthropicPassthroughHeaders(request);
+    const passthroughHeaders = collectPassthroughHeaders(request.headers);
     const { response, provider, apiKey } = await relayRequest(body, 'anthropicMessages', userAgent, rawBody, passthroughHeaders);
     const latencyMs = Date.now() - startTime;
 

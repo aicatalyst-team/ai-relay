@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { buildHeaders } from '../lib/relay/transform';
+import { collectPassthroughHeaders } from '../lib/relay/passthrough';
 
 describe('Header Passthrough', () => {
   it('should forward all passthroughHeaders for Anthropic providers', () => {
@@ -97,5 +98,119 @@ describe('Header Passthrough', () => {
     expect(headers['Content-Type']).toBe('application/json');
     expect(headers['x-api-key']).toBe('sk-test-key');
     expect(headers['anthropic-version']).toBe('2023-06-01');
+  });
+
+  describe('collectPassthroughHeaders', () => {
+    it('should filter out sensitive authentication headers', () => {
+      const mockHeaders = new Map([
+        ['authorization', 'Bearer client-secret-key'],
+        ['x-api-key', 'client-api-key'],
+        ['api-key', 'azure-key'],
+        ['x-custom-header', 'safe-value'],
+        ['user-agent', 'my-client/1.0'],
+      ]);
+
+      const result = collectPassthroughHeaders({
+        forEach: (callback: (value: string, key: string) => void) => {
+          mockHeaders.forEach((value, key) => callback(value, key));
+        },
+      });
+
+      // Sensitive headers should be blocked
+      expect(result['authorization']).toBeUndefined();
+      expect(result['x-api-key']).toBeUndefined();
+      expect(result['api-key']).toBeUndefined();
+
+      // Safe headers should pass through
+      expect(result['x-custom-header']).toBe('safe-value');
+      expect(result['user-agent']).toBe('my-client/1.0');
+    });
+
+    it('should filter out PII/privacy headers', () => {
+      const mockHeaders = new Map([
+        ['cookie', 'session=abc123'],
+        ['set-cookie', 'token=xyz'],
+        ['x-forwarded-for', '192.168.1.1'],
+        ['x-real-ip', '10.0.0.1'],
+        ['forwarded', 'for=192.168.1.1'],
+        ['x-forwarded-host', 'example.com'],
+        ['x-forwarded-proto', 'https'],
+        ['x-app', 'cli'],
+      ]);
+
+      const result = collectPassthroughHeaders({
+        forEach: (callback: (value: string, key: string) => void) => {
+          mockHeaders.forEach((value, key) => callback(value, key));
+        },
+      });
+
+      // PII headers should be blocked
+      expect(result['cookie']).toBeUndefined();
+      expect(result['set-cookie']).toBeUndefined();
+      expect(result['x-forwarded-for']).toBeUndefined();
+      expect(result['x-real-ip']).toBeUndefined();
+      expect(result['forwarded']).toBeUndefined();
+      expect(result['x-forwarded-host']).toBeUndefined();
+      expect(result['x-forwarded-proto']).toBeUndefined();
+
+      // Safe headers should pass through
+      expect(result['x-app']).toBe('cli');
+    });
+
+    it('should filter out connection/transport headers', () => {
+      const mockHeaders = new Map([
+        ['host', 'api.example.com'],
+        ['content-length', '1234'],
+        ['connection', 'keep-alive'],
+        ['transfer-encoding', 'chunked'],
+        ['upgrade', 'websocket'],
+        ['te', 'trailers'],
+        ['trailer', 'Expires'],
+        ['user-agent', 'my-client/1.0'],
+      ]);
+
+      const result = collectPassthroughHeaders({
+        forEach: (callback: (value: string, key: string) => void) => {
+          mockHeaders.forEach((value, key) => callback(value, key));
+        },
+      });
+
+      // Connection headers should be blocked
+      expect(result['host']).toBeUndefined();
+      expect(result['content-length']).toBeUndefined();
+      expect(result['connection']).toBeUndefined();
+      expect(result['transfer-encoding']).toBeUndefined();
+      expect(result['upgrade']).toBeUndefined();
+      expect(result['te']).toBeUndefined();
+      expect(result['trailer']).toBeUndefined();
+
+      // Safe headers should pass through
+      expect(result['user-agent']).toBe('my-client/1.0');
+    });
+
+    it('should be case-insensitive for blocked headers', () => {
+      const mockHeaders = new Map([
+        ['Authorization', 'Bearer token'],
+        ['X-API-KEY', 'key'],
+        ['Cookie', 'session=123'],
+        ['HOST', 'example.com'],
+        ['x-custom-header', 'value'],
+      ]);
+
+      const result = collectPassthroughHeaders({
+        forEach: (callback: (value: string, key: string) => void) => {
+          mockHeaders.forEach((value, key) => callback(value, key));
+        },
+      });
+
+      // Blocked headers (regardless of case) should not pass through
+      expect(result['Authorization']).toBeUndefined();
+      expect(result['X-API-KEY']).toBeUndefined();
+      expect(result['Cookie']).toBeUndefined();
+      expect(result['HOST']).toBeUndefined();
+
+      // Safe headers should pass through
+      expect(result['x-custom-header']).toBe('value');
+    });
   });
 });
