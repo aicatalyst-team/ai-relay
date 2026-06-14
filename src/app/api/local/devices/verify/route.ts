@@ -33,15 +33,20 @@ export async function POST(request: NextRequest) {
   await kv.hset(`device_session:${device_code}`, { status: 'completed' });
 
   // Create device record with secure token hash
+  const tokenHash = await hashDeviceToken(session.device_token as string);
+
   await kv.hset(`device:${session.device_id}`, {
     name: session.device_name,
     platform: session.platform,
-    token_hash: await hashDeviceToken(session.device_token as string),
+    token_hash: tokenHash,
     status: 'online',
     config_version: 0,
     last_heartbeat: Date.now(),
     created_at: Date.now(),
   });
+
+  // Create reverse index for O(1) token lookup
+  await kv.set(`device_token:${tokenHash}`, session.device_id);
 
   return Response.json({ success: true, device_id: session.device_id });
 }

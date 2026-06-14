@@ -11,9 +11,11 @@ import { getKV } from '@/lib/admin/admin-config';
 const PREFIX = 'request_log:';
 const CAPTURE_FLAG_KEY = 'request_log_capture_enabled';
 const DEFAULT_MAX_ENTRIES = 100;
+const PRUNE_INTERVAL = 10; // Prune every N appends instead of every append
 
 export class KVRequestLogStore implements RequestLogStore {
   private maxEntries: number;
+  private appendCount: number = 0;
 
   constructor() {
     const userMax = parseInt(process.env.REQUEST_LOGS_MAX_ENTRIES || '', 10);
@@ -32,8 +34,11 @@ export class KVRequestLogStore implements RequestLogStore {
       // Store with 7-day TTL
       await kv.set(key, JSON.stringify(log), { ex: 7 * 24 * 60 * 60 });
 
-      // Prune old entries if we exceed maxEntries
-      await this.pruneIfNeeded(kv);
+      // Prune old entries every PRUNE_INTERVAL appends (not every append)
+      this.appendCount++;
+      if (this.appendCount % PRUNE_INTERVAL === 0) {
+        await this.pruneIfNeeded(kv);
+      }
     } catch (err) {
       // Non-critical: log append failures don't block the request
       console.error('[RequestLogStore] append failed:', err);

@@ -17,18 +17,9 @@ export async function POST(request: NextRequest) {
     return Response.json({ error: 'Missing token' }, { status: 401 });
   }
 
-  // Verify device token
+  // Verify device token using reverse index (O(1) lookup)
   const tokenHash = await hashDeviceToken(token);
-  const devices = await kv.keys('device:*');
-  let deviceId: string | null = null;
-
-  for (const key of devices) {
-    const device = await kv.hgetall(key);
-    if (device && device.token_hash === tokenHash) {
-      deviceId = key.replace('device:', '');
-      break;
-    }
-  }
+  const deviceId = await kv.get<string>(`device_token:${tokenHash}`);
 
   if (!deviceId) {
     return Response.json({ error: 'Invalid token' }, { status: 401 });

@@ -118,3 +118,13 @@ export const requestLogs = pgTable('request_logs', {
   index('request_logs_provider_idx').on(table.provider),
   index('request_logs_trace_id_idx').on(table.traceId),
 ]);
+
+// ── 7. Config Flags ─────────────────────────────────────────
+
+export const configFlags = pgTable('config_flags', {
+  key: text('key').primaryKey(),
+  value: text('value').notNull(),
+  expiresAt: timestamp('expires_at', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+});

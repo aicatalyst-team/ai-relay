@@ -114,21 +114,46 @@ export class PostgresRequestLogStore implements RequestLogStore {
     if (!db) return false;
 
     try {
-      // Use a simple key-value table or just check an env variable
-      // For simplicity, we'll use an env variable approach for now
-      // In production, this could be a dedicated config table
-      const envFlag = process.env.REQUEST_LOGS_CAPTURE_ENABLED;
-      return envFlag === '1' || envFlag === 'true';
+      const { configFlags } = await import('../../db/schema');
+      const { eq, and, gt, sql } = await import('drizzle-orm');
+
+      const flag = await db
+        .select()
+        .from(configFlags)
+        .where(
+          and(
+            eq(configFlags.key, 'request_logs_capture_enabled'),
+            gt(configFlags.expiresAt, sql`NOW()`)
+          )
+        )
+        .limit(1);
+
+      return flag.length > 0 && flag[0].value === '1';
     } catch {
       return false;
     }
   }
 
   async enableCapture(ttlSeconds: number): Promise<void> {
-    // For Postgres, we'd need a key-value config table to store TTL-based flags.
-    // For now, this is a no-op. In production, implement a config_flags table
-    // with (key, value, expires_at) columns.
-    console.warn('[PostgresRequestLogStore] enableCapture not yet implemented for Postgres');
+    const db = getDbOrNull();
+    if (!db) return;
+
+    try {
+      const { configFlags } = await import('../../db/schema');
+      const { sql } = await import('drizzle-orm');
+
+      const expiresAt = new Date(Date.now() + ttlSeconds * 1000);
+
+      // Upsert the flag
+      await db.execute(sql`
+        INSERT INTO config_flags (key, value, expires_at, updated_at)
+        VALUES ('request_logs_capture_enabled', '1', ${expiresAt}, NOW())
+        ON CONFLICT (key) DO UPDATE
+        SET value = '1', expires_at = ${expiresAt}, updated_at = NOW()
+      `);
+    } catch (err) {
+      console.error('[PostgresRequestLogStore] enableCapture failed:', err);
+    }
   }
 
   private async pruneIfNeeded(db: any): Promise<void> {

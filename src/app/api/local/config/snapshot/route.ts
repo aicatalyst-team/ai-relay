@@ -24,8 +24,10 @@ export async function GET(request: NextRequest) {
 
     return Response.json(snapshot);
   } catch (error: any) {
+    // Don't leak internal error details to client
+    console.error('[config/snapshot] Error:', error);
     return Response.json(
-      { error: { message: error.message, type: 'internal_error' } },
+      { error: { message: 'Failed to retrieve config snapshot', type: 'internal_error' } },
       { status: 500 }
     );
   }
