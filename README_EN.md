@@ -2,7 +2,7 @@
 
 <img src="docs/assets/logo-banner.svg" alt="AI Relay" width="400">
 
-**Serverless AI API Relay Gateway — one-click deploy to Vercel, or automated deploy to Cloudflare via GitHub Actions**
+**AI API Relay Gateway — serverless on Vercel/Cloudflare, or run locally with CLI**
 
 <h3>🚀 <a href="https://vercel.com/new/clone?repository-url=https://github.com/MoyuFamily/ai-relay&env=RELAY_API_KEY,RELAY_ADMIN_KEY,RELAY_SIGNING_SECRET&envDescription=API%20authentication%20keys%20(required%20for%20security)&envLink=https://github.com/MoyuFamily/ai-relay#environment-variables">Deploy to Vercel in one click and launch your AI API gateway in 2 minutes</a></h3>
 
@@ -18,7 +18,7 @@
 
 [![Version](https://img.shields.io/badge/Version-2.13.0-green.svg)](CHANGELOG.md)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Next.js](https://img.shields.io/badge/Next.js-14-black?logo=next.js)](https://nextjs.org/)
+[![Next.js](https://img.shields.io/badge/Next.js-15-black?logo=next.js)](https://nextjs.org/)
 [![Edge Runtime](https://img.shields.io/badge/Edge_Runtime-⚡-black?logo=vercel)](https://vercel.com/docs/functions/edge-functions)
 [![Upstash Redis](https://img.shields.io/badge/Upstash_Redis-Redis-black?logo=redis)](https://vercel.com/marketplace/upstash)
 
@@ -43,6 +43,7 @@
 
 - [Features](#-features)
 - [One-Click Deploy: Launch Your AI API Gateway in 2 Minutes](#-one-click-deploy-launch-your-ai-api-gateway-in-2-minutes)
+- [Local Relay Runtime (CLI)](#-local-relay-runtime-cli)
 - [Comparison](#-comparison-with-similar-projects)
 - [Why AI Relay?](#why-ai-relay)
 - [Usage](#-usage)
@@ -79,6 +80,7 @@
 | **Temp API Keys** | HMAC-SHA256 stateless signing, auto-expiring |
 | **Virtual Model Mapping** | Route virtual model names to real providers |
 | **Smart Routing** | Latency / cost / availability priority, auto-select optimal provider |
+| **Local Relay (CLI)** | Run a lightweight relay server locally — no cloud quota consumed, same config & API |
 | **API Key Security** | Masked display, health monitoring, rotation alerts, audit logs |
 
 ## 🚀 One-Click Deploy: Launch Your AI API Gateway in 2 Minutes
@@ -201,7 +203,66 @@ Visit `https://ai-relay.pages.dev/admin` to start using it.
 </details>
 
 <details>
-<summary><strong>📦 Local Development</strong></summary>
+<summary><strong>💻 Local Relay Runtime (CLI)</strong></summary>
+
+Beyond cloud deployment, AI Relay provides a local CLI tool to run a lightweight relay server on your machine.
+
+> 📖 **Full docs**: See [CLI_GUIDE.md](CLI_GUIDE.md) for detailed configuration, troubleshooting, and advanced usage.
+
+**Quick Start:**
+
+```bash
+# 1. Clone and install
+git clone https://github.com/MoyuFamily/ai-relay.git
+cd ai-relay
+pnpm install
+
+# 2. Install CLI globally
+npm link
+
+# 3. Enable auto-completion (optional, zsh)
+source cli/completions.zsh
+
+# 4. Login to cloud (optional, sync config from cloud)
+airelay login https://your-project.vercel.app
+
+# 5. Start local relay
+airelay local:start
+# 🚀 Local server running at http://localhost:8787
+```
+
+**Configuration options:**
+
+```bash
+# Option 1: Cloud config (recommended)
+airelay login https://cfairelay.izmw.me
+airelay local:start
+
+# Option 2: Local config file
+airelay local:start --config ./relay-config.json
+
+# Option 3: Environment variables (auto-discovers all *_KEYS)
+export OPENAI_KEYS="sk-xxx"
+export CLAUDE_KEYS="sk-ant-xxx"
+airelay local:start
+
+# Option 4: Hybrid (cloud base + local overrides)
+export RELAY_CLOUD_URL="https://cfairelay.izmw.me"
+airelay local:start --config ./local-overrides.json
+```
+
+**Docs:** See [CLI_GUIDE.md](CLI_GUIDE.md) for full features and config options.
+
+**Use cases:**
+- ✅ Local development and debugging, no cloud deployment needed
+- ✅ Intranet environments without public internet access
+- ✅ Quick testing of new provider configurations
+- ✅ Integration testing in CI/CD pipelines
+
+</details>
+
+<details>
+<summary><strong>📦 Web App Local Development</strong></summary>
 
 ```bash
 git clone https://github.com/MoyuFamily/ai-relay.git

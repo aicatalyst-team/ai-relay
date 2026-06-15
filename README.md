@@ -2,7 +2,7 @@
 
 <img src="docs/assets/logo-banner.svg" alt="AI Relay" width="400">
 
-**无服务器 AI API 中转网关：一键部署到 Vercel，或通过 GitHub Actions 自动部署到 Cloudflare**
+**AI API 中转网关：一键部署到 Vercel/Cloudflare，也可本地 CLI 运行**
 
 <h3>🚀 <a href="https://vercel.com/new/clone?repository-url=https://github.com/MoyuFamily/ai-relay&env=RELAY_API_KEY,RELAY_ADMIN_KEY,RELAY_SIGNING_SECRET&envDescription=API%20authentication%20keys%20(required%20for%20security)&envLink=https://github.com/MoyuFamily/ai-relay#environment-variables">一键部署到 Vercel，2 分钟上线你的 AI API 网关</a> · <a href="#-部署到-cloudflare-pages全自动">部署到 Cloudflare Pages</a></h3>
 
