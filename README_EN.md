@@ -42,7 +42,7 @@
 | | ☁️ Vercel | ☁️ Cloudflare | 💻 Local CLI |
 |---|---|---|---|
 | **Best for** | Light users, quick tryout | Heavy coding users | Agent / multimodal / power users |
-| **Monthly volume** | Low-mid (< 500M tokens/month) | High frequency (daily coding sessions) | Unlimited, bound by machine specs |
+| **Monthly volume** | Low-mid (< 500M tokens/month) | High frequency (daily coding sessions) | Unlimited, depends on network bandwidth |
 | **Token stats** | Sampling-based (configurable rate) | Sampling-based (CF CPU budget) | **Precise** (SQLite per-request logging) |
 | **Runtime** | Edge Serverless, cold start < 50ms | Edge Worker, global distribution | Persistent local process, no cold start |
 | **Storage** | Upstash Redis (KV) | Cloudflare D1 + KV | Local SQLite |
