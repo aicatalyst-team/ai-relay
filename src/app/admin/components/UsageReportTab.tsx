@@ -47,6 +47,17 @@ function formatDate(date: Date): string {
   return date.toISOString().slice(0, 10);
 }
 
+function formatYAxisValue(value: number): string {
+  if (typeof value !== 'number') return String(value);
+  if (value >= 1_000_000) {
+    return `${(value / 1_000_000).toFixed(1).replace(/\.0$/, '')}M`;
+  }
+  if (value >= 1_000) {
+    return `${(value / 1_000).toFixed(1).replace(/\.0$/, '')}K`;
+  }
+  return value.toString();
+}
+
 function rangeForPreset(preset: Preset, customRange: { from: string; to: string }): { from: string; to: string } {
   if (preset === 'custom' && customRange.from && customRange.to) return customRange;
   const to = new Date();
@@ -205,11 +216,14 @@ export default function UsageReportTab({ apiKey, lang }: Props) {
       {!error && chartData.length > 0 && (
         <div className="stat-card" style={{ height: 320 }}>
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={chartData} margin={{ top: 12, right: 20, left: 0, bottom: 0 }}>
+            <LineChart data={chartData} margin={{ top: 12, right: 20, left: 15, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" />
               <XAxis dataKey="date" stroke="#9ca3af" tick={{ fontSize: 12 }} />
-              <YAxis stroke="#9ca3af" tick={{ fontSize: 12 }} />
-              <Tooltip contentStyle={{ background: '#111827', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 8 }} />
+              <YAxis stroke="#9ca3af" tick={{ fontSize: 12 }} tickFormatter={formatYAxisValue} width={60} />
+              <Tooltip
+                contentStyle={{ background: '#111827', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 8 }}
+                formatter={(value: any) => (typeof value === 'number' ? value.toLocaleString() : value)}
+              />
               <Line type="monotone" dataKey={metric} name={labels[metric]} stroke={metricColors[metric]} strokeWidth={2.5} dot={false} />
             </LineChart>
           </ResponsiveContainer>
