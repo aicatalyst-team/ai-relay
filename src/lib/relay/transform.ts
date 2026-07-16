@@ -2,7 +2,7 @@
 // AI API Relay — Request Transformation
 // ============================================================
 
-import type { ChatCompletionRequest } from '../types';
+import type { ChatCompletionRequest, ChatCompletionResponse } from '../types';
 
 /**
  * Transform OpenAI-format request to Anthropic format.
@@ -444,6 +444,80 @@ export function transformOpenAIToAnthropic(
     usage: {
       input_tokens: openAiResponse.usage?.prompt_tokens || 0,
       output_tokens: openAiResponse.usage?.completion_tokens || 0,
+    },
+  };
+}
+
+export function mapAnthropicStopReasonToOpenAI(stopReason: string | null | undefined): string | null {
+  if (!stopReason) return null;
+  const map: Record<string, string> = {
+    end_turn: 'stop',
+    max_tokens: 'length',
+    stop_sequence: 'stop',
+    tool_use: 'tool_calls',
+  };
+  return map[stopReason] || 'stop';
+}
+
+/**
+ * Transform an Anthropic message response to OpenAI Chat Completions format.
+ *
+ * This keeps OpenAI-compatible clients insulated from a fallback to an
+ * Anthropic-format upstream. Text blocks are concatenated into message.content,
+ * and tool_use blocks are translated to OpenAI tool_calls.
+ */
+export function transformAnthropicMessageToOpenAIChat(
+  anthropicResponse: Record<string, any>,
+  model: string
+): ChatCompletionResponse {
+  const toolCalls: any[] = [];
+  let text = '';
+
+  for (const part of anthropicResponse.content || []) {
+    if (!part || typeof part !== 'object') continue;
+    if (part.type === 'text' && typeof part.text === 'string') {
+      text += part.text;
+    } else if (part.type === 'tool_use') {
+      toolCalls.push({
+        id: part.id || `call_${Date.now().toString(36)}_${toolCalls.length}`,
+        type: 'function',
+        function: {
+          name: part.name || '',
+          arguments: JSON.stringify(part.input ?? {}),
+        },
+      });
+    }
+  }
+
+  const finishReason = anthropicResponse.stop_reason
+    ? mapAnthropicStopReasonToOpenAI(anthropicResponse.stop_reason)
+    : null;
+
+  const promptTokens = anthropicResponse.usage?.input_tokens || 0;
+  const completionTokens = anthropicResponse.usage?.output_tokens || 0;
+
+  const message: ChatCompletionResponse['choices'][number]['message'] = {
+    role: 'assistant',
+    content: text || null,
+  };
+  if (toolCalls.length > 0) message.tool_calls = toolCalls;
+
+  return {
+    id: anthropicResponse.id || `chatcmpl_${Date.now().toString(36)}`,
+    object: 'chat.completion',
+    created: Math.floor(Date.now() / 1000),
+    model,
+    choices: [
+      {
+        index: 0,
+        message,
+        finish_reason: finishReason,
+      },
+    ],
+    usage: {
+      prompt_tokens: promptTokens,
+      completion_tokens: completionTokens,
+      total_tokens: promptTokens + completionTokens,
     },
   };
 }

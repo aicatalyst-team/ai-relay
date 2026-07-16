@@ -278,16 +278,14 @@ jobs:
           export CLOUDFLARE_ACCOUNT_ID="${CLOUDFLARE_ACCOUNT_ID}"
           pnpm exec wrangler d1 migrations apply ai-relay --remote
 
-      - name: Deploy to Cloudflare Pages
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: |
-          export CLOUDFLARE_API_TOKEN="${CLOUDFLARE_API_TOKEN}"
-          export CLOUDFLARE_ACCOUNT_ID="${CLOUDFLARE_ACCOUNT_ID}"
-          pnpm exec wrangler pages deploy .open-next --project-name="$CLOUDFLARE_PAGES_PROJECT_NAME" --branch="${GITHUB_REF_NAME}"
-
       - name: Configure environment variables
+        # Must run BEFORE the deploy step: Cloudflare Pages only binds
+        # secrets/vars to the NEXT deployment, never retroactively to the
+        # one being published. If secrets are pushed after `pages deploy`,
+        # the freshly published deployment starts with an empty process.env
+        # (no RELAY_ADMIN_KEY / RELAY_API_KEY), so admin auth returns 401
+        # until a second deploy picks them up. Pushing them first ensures the
+        # deployment below is published with the secrets already bound.
         if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -325,15 +323,41 @@ jobs:
           export CLOUDFLARE_API_TOKEN="${CLOUDFLARE_API_TOKEN}"
           export CLOUDFLARE_ACCOUNT_ID="${CLOUDFLARE_ACCOUNT_ID}"
 
+          # Cloudflare Pages keeps production and preview env vars fully
+          # separate, and `wrangler pages secret put` defaults to the
+          # production environment. But `pages deploy --branch=<branch>`
+          # publishes to *preview* whenever the branch is not the project's
+          # production branch (e.g. a workflow_dispatch run from a feature or
+          # pre-release branch). If we only wrote production secrets, that
+          # preview deployment would start with an empty process.env and
+          # admin/relay auth would return "Invalid API key". Pick the target
+          # environment to match the branch we are about to deploy so the
+          # secret lands where the deployment can actually read it.
+          if [ "${GITHUB_REF_NAME}" = "${CLOUDFLARE_PAGES_PRODUCTION_BRANCH}" ]; then
+            PAGES_ENV="production"
+          else
+            PAGES_ENV="preview"
+          fi
+          echo "Target Pages environment: ${PAGES_ENV} (branch=${GITHUB_REF_NAME}, production branch=${CLOUDFLARE_PAGES_PRODUCTION_BRANCH})"
+
           # 动态遍历环境变量中所有以 SYNC_ 开头的变量并推送到 CF Pages
           for var_name in $(env | grep -oE '^SYNC_[A-Z0-9_]+' | sort -u); do
             # 提取原变量名
             target_name="${var_name#SYNC_}"
             # 获取变量的值
             val="${!var_name}"
-            
+
             if [ -n "$val" ]; then
-              echo "Syncing $target_name..."
-              echo "$val" | pnpm exec wrangler pages secret put "$target_name" --project-name="$CLOUDFLARE_PAGES_PROJECT_NAME"
+              echo "Syncing $target_name to ${PAGES_ENV}..."
+              echo "$val" | pnpm exec wrangler pages secret put "$target_name" --project-name="$CLOUDFLARE_PAGES_PROJECT_NAME" --env "$PAGES_ENV"
             fi
           done
+
+      - name: Deploy to Cloudflare Pages
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          export CLOUDFLARE_API_TOKEN="${CLOUDFLARE_API_TOKEN}"
+          export CLOUDFLARE_ACCOUNT_ID="${CLOUDFLARE_ACCOUNT_ID}"
+          pnpm exec wrangler pages deploy .open-next --project-name="$CLOUDFLARE_PAGES_PROJECT_NAME" --branch="${GITHUB_REF_NAME}"
