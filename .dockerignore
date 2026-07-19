@@ -1,0 +1,12 @@
+.git
+*.md
+LICENSE
+kubernetes/
+poc-plan.md
+.autopoc/
+node_modules/
+.next/
+.env*
+.vercel/
+scratch/
+docs/

@@ -1,0 +1,41 @@
+FROM registry.access.redhat.com/ubi9/nodejs-22
+
+WORKDIR /opt/app-root/src
+
+# Override .npmrc to use default npm registry (original uses Chinese mirror)
+RUN echo "registry=https://registry.npmjs.org" > .npmrc
+
+# Install pnpm globally
+RUN npm install -g pnpm@latest
+
+# Copy dependency files first for layer caching
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+
+# Install production dependencies
+RUN pnpm install --frozen-lockfile
+
+# Copy application source
+COPY . .
+
+# Override .npmrc again after COPY overwrites it
+RUN echo "registry=https://registry.npmjs.org" > .npmrc
+
+# Patch next.config.mjs to enable standalone output for containers
+RUN sed -i 's|const nextConfig = {|const nextConfig = {\n  output: "standalone",|' next.config.mjs
+
+# Build the Next.js application
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+RUN pnpm run build
+
+# OpenShift compatibility: group permissions
+RUN chgrp -R 0 /opt/app-root && chmod -R g=u /opt/app-root
+
+EXPOSE 3000
+
+USER 1001
+
+ENV PORT=3000
+ENV HOSTNAME=0.0.0.0
+
+CMD ["node", ".next/standalone/server.js"]
