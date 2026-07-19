@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Deploying an AI API gateway on Red Hat OpenShift: a PoC with AI Relay</title>
+  <meta name="description" content="Learn how we containerized and deployed AI Relay, an open-source multi-provider LLM API gateway, on Red Hat OpenShift using UBI containers. Full PoC walkthrough with deployment artifacts.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Red+Hat+Display:wght@400;500;600;700&family=Red+Hat+Text:wght@400;500;700&family=Red+Hat+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script>
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: 'base',
+      themeVariables: {
+        primaryColor: '#EE0000',
+        primaryTextColor: '#FFFFFF',
+        primaryBorderColor: '#A30000',
+        lineColor: '#6A6E73',
+        secondaryColor: '#F0F0F0',
+        tertiaryColor: '#0066CC'
+      }
+    });
+  </script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Red Hat Text', sans-serif; font-size: 18px; line-height: 1.7; color: #151515; background: #FFFFFF; }
+    .rh-banner { background: #151515; padding: 12px 0; border-bottom: 3px solid #EE0000; }
+    .rh-banner-inner { max-width: 1200px; margin: 0 auto; padding: 0 24px; display: flex; align-items: center; gap: 24px; }
+    .rh-logo svg { height: 28px; width: auto; }
+    .rh-nav { display: flex; gap: 20px; }
+    .rh-nav a { color: #FFFFFF; text-decoration: none; font-size: 14px; font-weight: 500; }
+    .blog-bar { background: #F0F0F0; border-bottom: 1px solid #D2D2D2; padding: 14px 0; }
+    .blog-bar-inner { max-width: 1200px; margin: 0 auto; padding: 0 24px; display: flex; gap: 8px; font-size: 14px; color: #6A6E73; }
+    .blog-bar-inner a { color: #0066CC; text-decoration: none; }
+    .blog-bar-inner .sep { color: #B8BBBE; }
+    .hero { background: linear-gradient(135deg, #151515 0%, #292929 60%, #3F0000 100%); padding: 80px 0 72px; position: relative; overflow: hidden; }
+    .hero::after { content: ''; position: absolute; top: 0; right: 0; width: 40%; height: 100%; background: linear-gradient(180deg, rgba(238,0,0,0.08) 0%, rgba(238,0,0,0.02) 100%); pointer-events: none; }
+    .hero-inner { max-width: 800px; margin: 0 auto; padding: 0 24px; position: relative; z-index: 1; }
+    .hero-label { display: inline-block; background: #EE0000; color: #FFFFFF; font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 4px 12px; border-radius: 2px; margin-bottom: 24px; }
+    .hero h1 { font-family: 'Red Hat Display', sans-serif; font-size: 42px; font-weight: 700; line-height: 1.15; color: #FFFFFF; margin-bottom: 20px; }
+    .hero .subtitle { font-size: 20px; color: #B8BBBE; line-height: 1.5; margin-bottom: 32px; }
+    .hero-meta { display: flex; gap: 16px; color: #A3A3A3; font-size: 14px; }
+    .hero-meta .author { color: #FFFFFF; font-weight: 500; }
+    .hero-meta .dot { color: #6A6E73; }
+    .article-wrap { max-width: 800px; margin: 0 auto; padding: 56px 24px 80px; }
+    .article-wrap p { margin-bottom: 24px; }
+    .article-wrap a { color: #0066CC; text-decoration: none; }
+    .article-wrap h2 { font-family: 'Red Hat Display', sans-serif; font-size: 28px; font-weight: 600; margin-top: 48px; margin-bottom: 20px; padding-top: 8px; border-top: 2px solid #F0F0F0; }
+    .article-wrap h2:first-of-type { margin-top: 40px; }
+    .article-wrap h3 { font-family: 'Red Hat Display', sans-serif; font-size: 20px; font-weight: 600; margin-top: 32px; margin-bottom: 12px; }
+    .article-wrap ul, .article-wrap ol { margin-bottom: 24px; padding-left: 24px; }
+    .article-wrap li { margin-bottom: 16px; }
+    .tagline { font-size: 20px; font-weight: 500; color: #383838; margin: 32px 0; padding: 20px 24px; border-left: 4px solid #EE0000; background: #FEF0F0; }
+    .image-placeholder { margin: 40px 0; background: #F0F0F0; border: 2px dashed #D2D2D2; border-radius: 8px; padding: 48px 32px; text-align: center; }
+    .image-placeholder .ph-icon { display: inline-flex; align-items: center; justify-content: center; width: 56px; height: 56px; background: #E0E0E0; border-radius: 50%; margin-bottom: 16px; }
+    .image-placeholder .ph-icon svg { width: 28px; height: 28px; fill: #6A6E73; }
+    .image-placeholder .ph-title { font-family: 'Red Hat Display', sans-serif; font-size: 16px; font-weight: 600; color: #383838; margin-bottom: 8px; }
+    .image-placeholder .ph-alt { font-size: 14px; color: #6A6E73; font-style: italic; max-width: 560px; margin: 0 auto; }
+    .mermaid { margin: 40px 0; text-align: center; background: #FFFFFF; padding: 24px; border-radius: 8px; border: 1px solid #F0F0F0; }
+    .article-wrap pre { background: #1E1E1E; color: #D4D4D4; font-family: 'Red Hat Mono', monospace; font-size: 14px; line-height: 1.6; padding: 24px; border-radius: 8px; overflow-x: auto; margin-bottom: 24px; }
+    .article-wrap code { font-family: 'Red Hat Mono', monospace; font-size: 15px; background: #F0F0F0; padding: 2px 6px; border-radius: 3px; }
+    .article-wrap pre code { background: none; padding: 0; font-size: 14px; }
+    .rh-footer { background: #151515; padding: 40px 0; }
+    .rh-footer-inner { max-width: 1200px; margin: 0 auto; padding: 0 24px; display: flex; justify-content: space-between; }
+    .rh-footer-text { color: #6A6E73; font-size: 13px; }
+    .rh-footer-links { display: flex; gap: 24px; }
+    .rh-footer-links a { color: #A3A3A3; text-decoration: none; font-size: 13px; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 24px; font-size: 16px; }
+    table th { background: #F0F0F0; font-family: 'Red Hat Display', sans-serif; font-weight: 600; text-align: left; padding: 12px 16px; border-bottom: 2px solid #D2D2D2; }
+    table td { padding: 12px 16px; border-bottom: 1px solid #F0F0F0; }
+    table tr:hover td { background: #FAFAFA; }
+    @media (max-width: 768px) { .hero h1 { font-size: 30px; } .article-wrap { padding: 40px 20px 60px; } }
+  </style>
+</head>
+<body>
+  <header class="rh-banner">
+    <div class="rh-banner-inner">
+      <div class="rh-logo">
+        <svg viewBox="0 0 613 145" xmlns="http://www.w3.org/2000/svg">
+          <path d="M127.47 83.49c12.51 0 30.61-2.58 30.61-17.46a14 14 0 0 0-.31-3.42l-7.45-32.36c-1.72-7.12-3.23-10.35-15.73-16.6C124.89 8.69 103.76.5 97.51.5 91.69.5 90 8 83.06 8c-6.68 0-11.64-5.6-17.89-5.6-6 0-9.91 4.09-12.93 12.5 0 0-8.41 23.72-9.49 27.16a6.43 6.43 0 0 0-.22 1.94c0 9.22 36.3 39.45 84.94 39.45M127.47 83.49c-12.51 0-30.61 2.58-30.61 17.46a14 14 0 0 0 .31 3.42l7.45 32.36c1.72 7.12 3.23 10.35 15.73 16.6 9.7 4.96 30.83 13.15 37.08 13.15 5.82 0 7.51-7.5 14.45-7.5 6.68 0 11.64 5.6 17.89 5.6 6 0 9.91-4.09 12.93-12.5 0 0 8.41-23.72 9.49-27.16a6.43 6.43 0 0 0 .22-1.94c0-9.22-36.3-39.45-84.94-39.45" fill="#EE0000"/>
+          <text x="220" y="95" font-family="Red Hat Display, sans-serif" font-weight="700" font-size="72" fill="#FFFFFF">Red Hat</text>
+        </svg>
+      </div>
+      <nav class="rh-nav"><a href="#">Products</a><a href="#">Solutions</a><a href="#">Blog</a></nav>
+    </div>
+  </header>
+  <div class="blog-bar"><div class="blog-bar-inner"><a href="#">Red Hat Developer Blog</a> <span class="sep">/</span> <a href="#">AI/ML</a> <span class="sep">/</span> AI API Gateway PoC</div></div>
+  <section class="hero">
+    <div class="hero-inner">
+      <span class="hero-label">Red Hat OpenShift AI</span>
+      <h1>Deploying an AI API gateway on Red Hat OpenShift: a PoC with AI Relay</h1>
+      <p class="subtitle">How we containerized and deployed a multi-provider LLM gateway using UBI containers</p>
+      <div class="hero-meta">
+        <span class="author">AI Catalyst Team</span>
+        <span class="dot">&middot;</span>
+        <span>July 2026</span>
+        <span class="dot">&middot;</span>
+        <span>7 min read</span>
+      </div>
+    </div>
+  </section>
+  <article class="article-wrap">
+
+    <div class="image-placeholder">
+      <div class="ph-icon"><svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg></div>
+      <div class="ph-title">Hero image</div>
+      <div class="ph-alt">Illustration of multiple AI provider connections converging through a single gateway to application endpoints</div>
+    </div>
+
+    <h2>The multi-provider problem</h2>
+
+    <p>Your team uses GPT for customer-facing chat, Claude for code generation, and DeepSeek for batch summarization. Each application manages its own provider credentials, failover logic, and rate-limit handling. When a provider goes down at 2 AM, three different on-call engineers get paged for the same root cause.</p>
+
+    <p>This is the problem AI Relay solves. It is an open-source large language model (LLM) API gateway that unifies multiple providers behind a single OpenAI-compatible endpoint, handling key rotation, circuit-breaker failover, and smart routing. We deployed it on Red Hat OpenShift using Universal Base Image (UBI) containers to prove that this kind of AI infrastructure middleware runs natively on enterprise Kubernetes.</p>
+
+    <div class="mermaid">
+%%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#EE0000', 'primaryTextColor': '#fff', 'primaryBorderColor': '#A30000', 'lineColor': '#6A6E73', 'secondaryColor': '#F0F0F0', 'tertiaryColor': '#0066CC'}}}%%
+graph LR
+    APP1[App 1] --> GW["AI Relay<br/>Gateway"]
+    APP2[App 2] --> GW
+    APP3[App 3] --> GW
+    GW -->|primary| OAI[OpenAI]
+    GW -->|fallback| ANT[Anthropic]
+    GW -->|batch| DS[DeepSeek]
+    GW -->|custom| VLLM[vLLM / KServe]
+    style GW fill:#EE0000,color:#fff
+    style OAI fill:#0066CC,color:#fff
+    style ANT fill:#0066CC,color:#fff
+    style DS fill:#0066CC,color:#fff
+    style VLLM fill:#0066CC,color:#fff
+    </div>
+
+    <h2>Why this matters for Red Hat OpenShift AI</h2>
+
+    <p>Enterprise teams running <a href="https://www.redhat.com/en/technologies/cloud-computing/openshift/openshift-ai">Red Hat OpenShift AI</a> often deploy multiple inference servers: vLLM for high-throughput serving, KServe for model lifecycle management, and external APIs for models that are not self-hosted. AI Relay can sit in front of all of these, providing a single endpoint with automatic failover and usage tracking.</p>
+
+    <p>The built-in admin dashboard gives platform engineers a web interface for managing API keys, configuring routing policies (by latency, cost, or availability), and monitoring per-provider usage. For operations teams, this means centralized control over LLM traffic without modifying individual applications.</p>
+
+    <h2>Containerizing for OpenShift with UBI</h2>
+
+    <p>AI Relay is a Next.js 15 application built with pnpm. We created a Dockerfile from scratch using the ubi9/nodejs-22 base image.</p>
+
+    <p>3 issues came up during containerization:</p>
+
+    <p><strong>Registry override.</strong> The project's .npmrc points to a Chinese npm mirror. We overwrote this file in the Dockerfile to use the default npm registry, ensuring consistent builds regardless of where the image is built.</p>
+
+    <p><strong>Standalone output mode.</strong> For container deployments, Next.js needs its output mode set to &ldquo;standalone&rdquo; to create a self-contained server bundle. We patched next.config.mjs during the build and copied the public/ and static asset directories into the standalone output.</p>
+
+    <p><strong>OpenShift UID handling.</strong> UBI images default to UID 1001, but build steps (pnpm install, next build) need root access. We ran build steps as USER 0, then set group-0 permissions and switched back to USER 1001 for runtime. This pattern ensures compatibility with OpenShift's arbitrary UID assignment.</p>
+
+    <p>The build ran on-cluster using an OpenShift BuildConfig with binary input. The first attempt failed on a file permission issue with .npmrc; the second succeeded and pushed the image to Quay.io.</p>
+
+    <div class="tagline">Interested in containerizing your own AI projects for OpenShift? Check out the <a href="https://docs.redhat.com/en/documentation/red_hat_openshift_ai_self-managed/">Red Hat OpenShift AI documentation</a> for patterns and best practices.</div>
+
+    <h2>Deploying to the cluster</h2>
+
+    <p>The deployment uses a standard Kubernetes Deployment with a ClusterIP Service on port 3000. We kept the resource profile small: 256 Mi memory request with a 512 Mi limit and 250 m CPU request with a 500 m limit. AI Relay is a pure API proxy with no model inference, so it needs neither GPU resources nor large memory allocations.</p>
+
+    <p>One operational detail: AI Relay's /health endpoint returns HTTP 503 when no LLM provider keys are configured. This is semantically correct (&ldquo;degraded&rdquo; status), but Kubernetes HTTP readiness probes treat anything outside 200 to 399 as failure. We switched to TCP socket probes on port 3000, which verify the server is listening without interpreting the response code. This is a useful pattern for any application that reports degraded health when optional dependencies are missing.</p>
+
+    <div class="mermaid">
+%%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#EE0000', 'primaryTextColor': '#fff', 'primaryBorderColor': '#A30000', 'lineColor': '#6A6E73', 'secondaryColor': '#F0F0F0', 'tertiaryColor': '#0066CC'}}}%%
+graph TD
+    subgraph NS["Namespace: poc-ai-relay"]
+        SVC["Service: web<br/>ClusterIP:3000"] --> DEP["Deployment: web<br/>1 replica"]
+        DEP --> POD["Pod<br/>ubi9/nodejs-22<br/>Next.js 15 standalone"]
+    end
+    IMG["quay.io/aicatalyst/<br/>ai-relay-web:latest"] -.->|image pull| POD
+    style NS fill:#F0F0F0,stroke:#6A6E73
+    style SVC fill:#0066CC,color:#fff
+    style DEP fill:#0066CC,color:#fff
+    style POD fill:#EE0000,color:#fff
+    </div>
+
+    <h2>Validating the deployment</h2>
+
+    <p>We ran 4 smoke tests against the deployed service to confirm the application starts, serves its endpoints, and renders its user interface correctly. These tests validate containerization and deployment, not the full relay functionality (which requires configured provider API keys):</p>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Scenario</th>
+          <th>Endpoint</th>
+          <th>Result</th>
+          <th>Response time</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Health check</td>
+          <td>GET /health</td>
+          <td>Pass (503 degraded)</td>
+          <td>0.04 s</td>
+        </tr>
+        <tr>
+          <td>Models listing</td>
+          <td>GET /v1/models</td>
+          <td>Pass (200)</td>
+          <td>0.01 s</td>
+        </tr>
+        <tr>
+          <td>Admin dashboard</td>
+          <td>GET /admin</td>
+          <td>Pass (200)</td>
+          <td>0.01 s</td>
+        </tr>
+        <tr>
+          <td>Homepage</td>
+          <td>GET /</td>
+          <td>Pass (200)</td>
+          <td>&lt; 0.01 s</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p>The health endpoint returned structured JSON with version information, provider status (0 configured out of 6 available), and a list of supported features including streaming, multi-key rotation, and usage tracking. The models endpoint returned a full catalog of supported models across all providers with pricing and capability metadata, even without configured API keys.</p>
+
+    <div class="image-placeholder">
+      <div class="ph-icon"><svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg></div>
+      <div class="ph-title">Admin dashboard screenshot</div>
+      <div class="ph-alt">AI Relay admin dashboard showing provider status, usage monitoring panels, and model catalog in dark theme</div>
+    </div>
+
+    <h2>What we learned</h2>
+
+    <p>The biggest operational insight: health endpoints should be designed with Kubernetes probes in mind from the start. Returning 503 for &ldquo;running but not fully configured&rdquo; is correct HTTP semantics, but it creates a mismatch with how Kubernetes interprets readiness. Applications targeting OpenShift should consider a separate /readyz endpoint that returns 200 if the process is healthy, regardless of external dependency status.</p>
+
+    <p>Next.js standalone mode proved essential for container deployments. Without it, the production server requires the full node_modules tree at runtime, increasing image size and startup time. With standalone mode enabled, the application started in under 1 second.</p>
+
+    <p>On the build side, OpenShift BuildConfig with binary input handled everything: it accepted our local source directory, built the image on-cluster, and pushed directly to Quay.io using a registry push secret. No local container runtime was needed, which simplifies CI/CD pipelines that run inside Kubernetes.</p>
+
+    <h2>Try it yourself</h2>
+
+    <p>The deployment artifacts are available in the <a href="https://github.com/aicatalyst-team/ai-relay/tree/autopoc-artifacts">autopoc-artifacts branch</a>:</p>
+
+    <ul>
+      <li>Dockerfile.ubi for UBI-based containerization</li>
+      <li>kubernetes/ directory with Deployment and Service manifests</li>
+      <li>poc_test.py for automated validation</li>
+      <li>poc-report.md for the complete PoC report</li>
+    </ul>
+
+    <p>To enable full relay functionality, create a Kubernetes Secret with your provider API keys and reference them in the Deployment's environment variables. The admin dashboard provides a web interface for configuring providers, routing policies, and usage alerts once keys are available.</p>
+
+    <p>The source project is at <a href="https://github.com/MoyuFamily/ai-relay">github.com/MoyuFamily/ai-relay</a>, and the Red Hat AI Catalyst fork is at <a href="https://github.com/aicatalyst-team/ai-relay">github.com/aicatalyst-team/ai-relay</a>.</p>
+
+    <p>Explore more about deploying AI workloads on <a href="https://www.redhat.com/en/technologies/cloud-computing/openshift/openshift-ai">Red Hat OpenShift AI</a> and discover how the platform simplifies the lifecycle of machine learning models in production.</p>
+
+  </article>
+  <footer class="rh-footer">
+    <div class="rh-footer-inner">
+      <div class="rh-footer-text">&copy; 2026 Red Hat, Inc.</div>
+      <div class="rh-footer-links"><a href="#">Privacy</a><a href="#">Terms</a></div>
+    </div>
+  </footer>
+</body>
+</html>
