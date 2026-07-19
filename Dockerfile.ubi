@@ -1,9 +1,9 @@
 FROM registry.access.redhat.com/ubi9/nodejs-22
 
-WORKDIR /opt/app-root/src
+# Switch to root for build operations
+USER 0
 
-# Override .npmrc to use default npm registry (original uses Chinese mirror)
-RUN echo "registry=https://registry.npmjs.org" > .npmrc
+WORKDIR /opt/app-root/src
 
 # Install pnpm globally
 RUN npm install -g pnpm@latest
@@ -11,7 +11,10 @@ RUN npm install -g pnpm@latest
 # Copy dependency files first for layer caching
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 
-# Install production dependencies
+# Override .npmrc to use default npm registry (original uses Chinese mirror)
+RUN echo "registry=https://registry.npmjs.org" > .npmrc
+
+# Install dependencies
 RUN pnpm install --frozen-lockfile
 
 # Copy application source
@@ -28,11 +31,16 @@ ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN pnpm run build
 
+# Copy public and static assets to standalone output
+RUN cp -r public .next/standalone/public 2>/dev/null || true
+RUN cp -r .next/static .next/standalone/.next/static 2>/dev/null || true
+
 # OpenShift compatibility: group permissions
 RUN chgrp -R 0 /opt/app-root && chmod -R g=u /opt/app-root
 
 EXPOSE 3000
 
+# Switch back to non-root user
 USER 1001
 
 ENV PORT=3000
